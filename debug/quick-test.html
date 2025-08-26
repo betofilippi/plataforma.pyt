@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Test - React Status</title>
+</head>
+<body style="font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 20px;">
+    <h1>🔍 Quick React Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(test, status, details = '') {
+            const div = document.createElement('div');
+            div.innerHTML = `
+                <div style="padding: 10px; margin: 5px 0; background: #161b22; border-radius: 6px; border-left: 4px solid ${status === 'OK' ? '#238636' : '#da3633'};">
+                    <strong>${test}:</strong> ${status === 'OK' ? '✅ OK' : '❌ Falha'}
+                    ${details ? `<div style="margin-top: 8px; color: #7d8590; font-size: 12px;">${details}</div>` : ''}
+                </div>
+            `;
+            results.appendChild(div);
+        }
+        
+        // Test 1: Check if root element exists
+        const root = document.getElementById('root');
+        addResult('Root Element', root ? 'OK' : 'FAIL', 
+            root ? `Elemento encontrado, children: ${root.children.length}` : 'Elemento #root não encontrado');
+        
+        // Test 2: Check if we can reach the main application
+        fetch('http://localhost:3030/')
+            .then(response => response.text())
+            .then(html => {
+                const hasRoot = html.includes('<div id="root">');
+                const hasReact = html.includes('React');
+                
+                addResult('HTML Structure', hasRoot ? 'OK' : 'FAIL',
+                    `Root div: ${hasRoot ? 'Sim' : 'Não'}, React references: ${hasReact ? 'Sim' : 'Não'}`);
+                
+                // Test React loading by checking if main script exists
+                const scripts = Array.from(document.scripts);
+                const viteClient = scripts.find(s => s.src.includes('@vite/client'));
+                const mainScript = scripts.find(s => s.src.includes('main.tsx'));
+                
+                addResult('Scripts Carregados', (viteClient && mainScript) ? 'OK' : 'FAIL',
+                    `Vite client: ${viteClient ? 'Sim' : 'Não'}, Main script: ${mainScript ? 'Sim' : 'Não'}, Total scripts: ${scripts.length}`);
+            })
+            .catch(error => {
+                addResult('Network Test', 'FAIL', error.message);
+            });
+        
+        // Test 3: Check if we're in the right URL
+        addResult('Current URL', 'INFO', `${window.location.href}`);
+        
+        // Test 4: Try to detect if React eventually loads
+        let checkCount = 0;
+        const maxChecks = 10;
+        
+        function checkReactLoading() {
+            checkCount++;
+            const rootHasContent = root && (root.children.length > 0 || root.textContent.trim().length > 0);
+            
+            if (rootHasContent) {
+                addResult('React Content', 'OK', 
+                    `React renderizou conteúdo após ${checkCount * 2} segundos`);
+                return;
+            }
+            
+            if (checkCount < maxChecks) {
+                setTimeout(checkReactLoading, 2000);
+            } else {
+                addResult('React Content', 'FAIL', 
+                    `React não renderizou após ${maxChecks * 2} segundos`);
+            }
+        }
+        
+        // Start checking React loading
+        setTimeout(checkReactLoading, 2000);
+        
+        // Test 5: Monitor console errors
+        let errorCount = 0;
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            errorCount++;
+            addResult(`Console Error ${errorCount}`, 'WARN', args.join(' '));
+            originalConsoleError.apply(console, args);
+        };
+        
+        // Display page info after 1 second
+        setTimeout(() => {
+            addResult('Page Info', 'INFO', 
+                `User Agent: ${navigator.userAgent.substring(0, 100)}...`);
+        }, 1000);
+    </script>
+</body>
+</html>

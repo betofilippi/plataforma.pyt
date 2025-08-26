@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug System - Plataforma.app</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Consolas', 'Monaco', monospace; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        
+        .header { background: #21262d; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .header h1 { color: #f0f6fc; margin-bottom: 15px; }
+        .status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .status-item { background: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d; }
+        .status-item h3 { color: #f0f6fc; margin-bottom: 8px; font-size: 14px; }
+        .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .dot.green { background: #238636; }
+        .dot.red { background: #da3633; }
+        .dot.yellow { background: #bf8700; }
+        .dot.gray { background: #6e7681; }
+        
+        .controls { background: #161b22; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .controls button { 
+            background: #238636; color: white; border: none; padding: 10px 20px; 
+            border-radius: 6px; margin-right: 15px; cursor: pointer; font-size: 14px;
+        }
+        .controls button:hover { background: #2ea043; }
+        .controls button.secondary { background: #21262d; }
+        .controls button.danger { background: #da3633; }
+        
+        .logs { background: #161b22; border-radius: 8px; padding: 20px; min-height: 400px; }
+        .logs h3 { color: #f0f6fc; margin-bottom: 15px; }
+        
+        .log-entry { 
+            background: #0d1117; border: 1px solid #30363d; border-radius: 6px; 
+            margin-bottom: 10px; padding: 12px 15px; font-size: 13px;
+        }
+        .log-entry.success { border-left: 4px solid #238636; }
+        .log-entry.error { border-left: 4px solid #da3633; }
+        .log-entry.warning { border-left: 4px solid #bf8700; }
+        .log-entry.info { border-left: 4px solid #1f6feb; }
+        
+        .timestamp { color: #7d8590; font-size: 11px; float: right; }
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #30363d; 
+                  border-top: 2px solid #1f6feb; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .result { margin-top: 8px; font-weight: bold; }
+        .result.ok { color: #238636; }
+        .result.error { color: #da3633; }
+        .result.warning { color: #bf8700; }
+        
+        .test-details { margin-top: 8px; font-size: 12px; color: #7d8590; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Debug System - Plataforma.app</h1>
+        <div class="status">
+            <div class="status-item">
+                <h3>Servidor Vite</h3>
+                <div>
+                    <span class="dot gray" id="server-dot"></span>
+                    <span id="server-text">Inicializando...</span>
+                </div>
+                <div class="result" id="server-result"></div>
+                <div class="test-details" id="server-details"></div>
+            </div>
+            <div class="status-item">
+                <h3>Aplicação React</h3>
+                <div>
+                    <span class="dot gray" id="app-dot"></span>
+                    <span id="app-text">Verificando...</span>
+                </div>
+                <div class="result" id="app-result"></div>
+                <div class="test-details" id="app-details"></div>
+            </div>
+            <div class="status-item">
+                <h3>API Backend</h3>
+                <div>
+                    <span class="dot gray" id="network-dot"></span>
+                    <span id="network-text">Testando...</span>
+                </div>
+                <div class="result" id="network-result"></div>
+                <div class="test-details" id="network-details"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="runDiagnostic()">🔄 Executar Diagnóstico</button>
+        <button onclick="copyFullReport()">📋 Copiar Relatório</button>
+        <button onclick="clearLogs()" class="danger">🗑️ Limpar Logs</button>
+        <button onclick="refreshPage()" class="secondary">↻ Recarregar Página</button>
+    </div>
+    
+    <div class="logs">
+        <h3>📋 Log de Diagnósticos</h3>
+        <div id="log-container">
+            <div class="log-entry info">
+                <span class="timestamp">[Inicializado]</span>
+                <strong>Sistema:</strong> Debug system carregado e pronto
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let logs = [];
+
+        function addLog(type, category, message, details = null) {
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const log = { type, category, message, details, timestamp };
+            logs.push(log);
+            
+            const container = document.getElementById('log-container');
+            const div = document.createElement('div');
+            div.className = `log-entry ${type}`;
+            div.innerHTML = `
+                <span class="timestamp">[${timestamp}]</span>
+                <strong>${category}:</strong> ${message}
+                ${details ? `<div class="test-details">${details}</div>` : ''}
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateStatus(component, status, text, details = '') {
+            const dot = document.getElementById(`${component}-dot`);
+            const textEl = document.getElementById(`${component}-text`);
+            const resultEl = document.getElementById(`${component}-result`);
+            const detailsEl = document.getElementById(`${component}-details`);
+            
+            dot.className = `dot ${status}`;
+            textEl.textContent = text;
+            
+            if (status === 'green') {
+                resultEl.textContent = '✅ OK';
+                resultEl.className = 'result ok';
+            } else if (status === 'red') {
+                resultEl.textContent = '❌ Falha';
+                resultEl.className = 'result error';
+            } else if (status === 'yellow') {
+                resultEl.textContent = '⚠️ Aviso';
+                resultEl.className = 'result warning';
+            }
+            
+            detailsEl.textContent = details;
+        }
+
+        async function testViteServer() {
+            updateStatus('server', 'yellow', 'Testando servidor...');
+            addLog('info', 'Vite Test', 'Verificando se servidor Vite está respondendo');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(window.location.origin, { 
+                    cache: 'no-cache',
+                    signal: AbortSignal.timeout(10000)
+                });
+                const duration = Date.now() - startTime;
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text.includes('<!DOCTYPE html>') && text.includes('root')) {
+                        updateStatus('server', 'green', 'Servidor Online', `Resposta em ${duration}ms`);
+                        addLog('success', 'Vite Test', `Servidor respondendo corretamente em ${duration}ms`);
+                        return true;
+                    } else {
+                        updateStatus('server', 'yellow', 'HTML inválido', 'Resposta não contém HTML válido');
+                        addLog('warning', 'Vite Test', 'Servidor responde mas HTML parece corrompido');
+                        return false;
+                    }
+                } else {
+                    updateStatus('server', 'red', `Erro HTTP ${response.status}`, 'Servidor retornou erro');
+                    addLog('error', 'Vite Test', `Servidor retornou status ${response.status}`);
+                    return false;
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateStatus('server', 'red', 'Timeout', 'Servidor não respondeu em 10s');
+                    addLog('error', 'Vite Test', 'Timeout: servidor não respondeu em 10 segundos');
+                } else {
+                    updateStatus('server', 'red', 'Offline', error.message);
+                    addLog('error', 'Vite Test', `Servidor inacessível: ${error.message}`);
+                }
+                return false;
+            }
+        }
+
+        async function testReactApp() {
+            updateStatus('app', 'yellow', 'Verificando React...');
+            addLog('info', 'React Test', 'Verificando se aplicação React carregou');
+            
+            try {
+                // Get fresh HTML from server to compare
+                const response = await fetch(window.location.origin);
+                const serverHtml = await response.text();
+                const serverHasRoot = serverHtml.includes('<div id="root">');
+                
+                // Check if React root exists in current DOM
+                const root = document.getElementById('root');
+                if (!root) {
+                    updateStatus('app', 'red', 'Root não encontrado', 'Elemento #root não existe no DOM atual');
+                    addLog('error', 'React Test', `Root no servidor: ${serverHasRoot ? 'Sim' : 'Não'}, Root no DOM: Não`);
+                    return false;
+                }
+
+                // Check if root has content
+                const hasContent = root.children.length > 0 || root.textContent.trim().length > 0;
+                if (!hasContent) {
+                    // Deep analysis of why React isn't loading
+                    const scripts = Array.from(document.scripts);
+                    const hasViteClient = scripts.some(s => s.src.includes('@vite/client'));
+                    const hasMainScript = scripts.some(s => s.src.includes('main.tsx') || s.src.includes('/src/main'));
+                    
+                    let reason = 'Root vazio';
+                    let details = `Scripts: Vite(${hasViteClient ? '✓' : '✗'}) Main(${hasMainScript ? '✓' : '✗'})`;
+                    
+                    if (!hasViteClient) {
+                        reason = 'Vite client não carregou';
+                        details = 'Script @vite/client não encontrado';
+                    } else if (!hasMainScript) {
+                        reason = 'Main script não carregou';
+                        details = 'Script main.tsx não encontrado';
+                    }
+                    
+                    updateStatus('app', 'yellow', reason, details);
+                    addLog('warning', 'React Test', `Root existe mas vazio. ${details}. Total scripts: ${scripts.length}`);
+                    
+                    return false;
+                }
+
+                // Check for React development indicators
+                const scripts = Array.from(document.scripts);
+                const hasViteClient = scripts.some(s => s.src.includes('@vite/client'));
+                const hasMainScript = scripts.some(s => s.src.includes('main.tsx') || s.src.includes('/src/main'));
+                const reactElements = root.querySelectorAll('*').length;
+
+                if (hasViteClient && hasMainScript && reactElements > 0) {
+                    updateStatus('app', 'green', 'React Ativo', `${reactElements} elementos, ${scripts.length} scripts`);
+                    addLog('success', 'React Test', `React funcionando! Elementos: ${reactElements}, Scripts: ${scripts.length}`);
+                    return true;
+                } else {
+                    updateStatus('app', 'yellow', 'Carregamento incompleto', 'Alguns recursos faltando');
+                    addLog('warning', 'React Test', `Vite: ${hasViteClient}, Main: ${hasMainScript}, Elementos: ${reactElements}`);
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('app', 'red', 'Erro', error.message);
+                addLog('error', 'React Test', `Erro ao verificar React: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function testBackendAPI() {
+            updateStatus('network', 'yellow', 'Testando API...');
+            addLog('info', 'API Test', 'Verificando conectividade com backend');
+            
+            try {
+                // Try multiple endpoints
+                const endpoints = ['/api/health', '/api/status', '/api/postgres/schemas'];
+                let workingEndpoint = null;
+                let lastError = null;
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'GET',
+                            cache: 'no-cache',
+                            signal: AbortSignal.timeout(5000)
+                        });
+                        
+                        if (response.ok) {
+                            workingEndpoint = endpoint;
+                            break;
+                        } else if (response.status !== 404) {
+                            // Non-404 errors are more informative
+                            lastError = `${endpoint} retornou ${response.status}`;
+                        }
+                    } catch (error) {
+                        lastError = error.message;
+                    }
+                }
+                
+                if (workingEndpoint) {
+                    updateStatus('network', 'green', 'API Online', `Endpoint ${workingEndpoint} respondendo`);
+                    addLog('success', 'API Test', `Backend API respondendo em ${workingEndpoint}`);
+                    return true;
+                } else {
+                    updateStatus('network', 'red', 'API Offline', lastError || 'Nenhum endpoint respondeu');
+                    addLog('error', 'API Test', `Nenhum endpoint da API respondeu. Último erro: ${lastError}`);
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('network', 'red', 'Erro de rede', error.message);
+                addLog('error', 'API Test', `Erro de conectividade com backend: ${error.message}`);
+                return false;
+            }
+        }
+
+        async function runDiagnostic() {
+            addLog('info', 'System', 'Iniciando diagnóstico completo do sistema...');
+            
+            const results = {
+                server: await testViteServer(),
+                app: await testReactApp(),
+                api: await testBackendAPI()
+            };
+            
+            const successCount = Object.values(results).filter(r => r).length;
+            const totalTests = Object.keys(results).length;
+            
+            if (successCount === totalTests) {
+                addLog('success', 'System', '🎉 Todos os testes passaram! Sistema funcionando normalmente');
+            } else if (successCount > 0) {
+                addLog('warning', 'System', `⚠️ ${successCount}/${totalTests} testes passaram. Sistema com problemas parciais`);
+            } else {
+                addLog('error', 'System', '❌ Todos os testes falharam. Sistema com problemas críticos');
+                
+                // Provide troubleshooting suggestions
+                if (!results.server) {
+                    addLog('info', 'Troubleshooting', 'Sugestão: Verifique se npm run dev está rodando');
+                }
+                if (!results.app) {
+                    addLog('info', 'Troubleshooting', 'Sugestão: Limpe cache do navegador e verifique console');
+                }
+                if (!results.api) {
+                    addLog('info', 'Troubleshooting', 'Sugestão: Backend pode estar desabilitado ou na porta errada');
+                }
+            }
+        }
+
+        function copyFullReport() {
+            // Coletar status atual
+            const serverStatus = document.getElementById('server-text').textContent;
+            const serverDetails = document.getElementById('server-details').textContent;
+            const appStatus = document.getElementById('app-text').textContent;
+            const appDetails = document.getElementById('app-details').textContent;
+            const networkStatus = document.getElementById('network-text').textContent;
+            const networkDetails = document.getElementById('network-details').textContent;
+            
+            // Construir relatório
+            let report = '🔍 RELATÓRIO COMPLETO - PLATAFORMA.APP DEBUG SYSTEM\n';
+            report += '=' .repeat(60) + '\n\n';
+            
+            // Informações do sistema
+            report += '📊 STATUS ATUAL\n';
+            report += '-'.repeat(40) + '\n';
+            report += `Servidor Vite: ${serverStatus}\n`;
+            if (serverDetails) report += `  └─ ${serverDetails}\n`;
+            report += `Aplicação React: ${appStatus}\n`;
+            if (appDetails) report += `  └─ ${appDetails}\n`;
+            report += `API Backend: ${networkStatus}\n`;
+            if (networkDetails) report += `  └─ ${networkDetails}\n\n`;
+            
+            // Informações do ambiente
+            report += '🖥️ AMBIENTE\n';
+            report += '-'.repeat(40) + '\n';
+            report += `Data/Hora: ${new Date().toLocaleString('pt-BR')}\n`;
+            report += `URL: ${window.location.href}\n`;
+            report += `User Agent: ${navigator.userAgent}\n`;
+            report += `Resolução: ${window.screen.width}x${window.screen.height}\n\n`;
+            
+            // Logs detalhados
+            report += '📋 LOGS DETALHADOS\n';
+            report += '-'.repeat(40) + '\n';
+            logs.forEach(log => {
+                report += `[${log.timestamp}] ${log.category}: ${log.message}\n`;
+                if (log.details) {
+                    report += `  Detalhes: ${log.details}\n`;
+                }
+            });
+            
+            if (logs.length === 0) {
+                report += 'Nenhum log registrado ainda.\n';
+            }
+            
+            report += '\n' + '='.repeat(60) + '\n';
+            report += 'Gerado por: Debug System - Plataforma.app\n';
+            report += `Timestamp: ${Date.now()}\n`;
+            
+            // Diagnóstico adicional
+            
+            // Copiar para clipboard
+            navigator.clipboard.writeText(report).then(() => {
+                // Feedback visual
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copiado!';
+                btn.style.background = '#238636';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+                
+                addLog('success', 'System', 'Relatório completo copiado para área de transferência');
+            }).catch(err => {
+                // Fallback - criar textarea temporária
+                const textarea = document.createElement('textarea');
+                textarea.value = report;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    addLog('success', 'System', 'Relatório copiado (método alternativo)');
+                    
+                    // Feedback visual
+                    const btn = event.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Copiado!';
+                    btn.style.background = '#238636';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                    }, 2000);
+                } catch (e) {
+                    addLog('error', 'System', 'Erro ao copiar relatório: ' + e.message);
+                }
+                document.body.removeChild(textarea);
+            });
+        }
+
+        function clearLogs() {
+            const container = document.getElementById('log-container');
+            container.innerHTML = '<div class="log-entry info"><span class="timestamp">[Limpo]</span><strong>Sistema:</strong> Logs foram limpos</div>';
+            logs = [];
+        }
+
+        function refreshPage() {
+            addLog('info', 'System', 'Recarregando página...');
+            setTimeout(() => window.location.reload(), 500);
+        }
+
+        // Auto-run diagnostic on load
+        setTimeout(() => {
+            addLog('info', 'System', 'Executando diagnóstico automático...');
+            runDiagnostic();
+        }, 1000);
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            addLog('info', 'System', 'Executando verificação automática...');
+            runDiagnostic();
+        }, 30000);
+    </script>
+</body>
+</html>

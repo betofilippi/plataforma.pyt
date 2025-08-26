@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor - Plataforma.app</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Consolas', 'Monaco', monospace; background: #0d1117; color: #c9d1d9; }
+        
+        .header { background: #21262d; padding: 20px; border-bottom: 1px solid #30363d; }
+        .header h1 { color: #f0f6fc; margin-bottom: 10px; }
+        
+        .controls { background: #161b22; padding: 15px; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 15px; }
+        .controls button { 
+            background: #238636; color: white; border: none; padding: 8px 16px; 
+            border-radius: 6px; cursor: pointer; font-size: 12px;
+        }
+        .controls button:hover { background: #2ea043; }
+        .controls button.secondary { background: #21262d; }
+        .controls button.danger { background: #da3633; }
+        
+        .status-bar { 
+            display: flex; 
+            gap: 20px; 
+            align-items: center; 
+            margin-left: auto;
+        }
+        
+        .status-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-size: 12px;
+        }
+        
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .dot.green { background: #238636; }
+        .dot.red { background: #da3633; }
+        .dot.yellow { background: #bf8700; }
+        
+        .main { padding: 20px; }
+        
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 20px;
+        }
+        
+        .stat-card { 
+            background: #161b22; 
+            border: 1px solid #30363d; 
+            border-radius: 6px; 
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-number { font-size: 24px; font-weight: bold; color: #f0f6fc; }
+        .stat-label { color: #7d8590; font-size: 11px; margin-top: 5px; }
+        
+        .requests-table { 
+            background: #161b22; 
+            border: 1px solid #30363d; 
+            border-radius: 6px; 
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .table-header { 
+            background: #21262d; 
+            padding: 15px; 
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-content { 
+            max-height: 400px; 
+            overflow-y: auto;
+        }
+        
+        table { 
+            width: 100%; 
+            border-collapse: collapse;
+        }
+        
+        th, td { 
+            padding: 10px; 
+            text-align: left; 
+            border-bottom: 1px solid #30363d; 
+            font-size: 12px;
+        }
+        
+        th { 
+            background: #21262d; 
+            color: #f0f6fc; 
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:hover { background: #21262d; }
+        
+        .method { 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 10px; 
+            font-weight: bold;
+        }
+        .method.GET { background: #238636; color: white; }
+        .method.POST { background: #1f6feb; color: white; }
+        .method.PUT { background: #bf8700; color: white; }
+        .method.DELETE { background: #da3633; color: white; }
+        
+        .status-code { 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 10px; 
+            font-weight: bold;
+        }
+        .status-code.success { background: #238636; color: white; }
+        .status-code.error { background: #da3633; color: white; }
+        .status-code.warning { background: #bf8700; color: white; }
+        
+        .duration { color: #7d8590; }
+        .duration.fast { color: #238636; }
+        .duration.slow { color: #bf8700; }
+        .duration.very-slow { color: #da3633; }
+        
+        .chart-container { 
+            background: #161b22; 
+            border: 1px solid #30363d; 
+            border-radius: 6px; 
+            padding: 20px; 
+            margin-bottom: 20px;
+        }
+        
+        .chart { 
+            height: 200px; 
+            background: #0d1117; 
+            border-radius: 4px; 
+            position: relative; 
+            overflow: hidden;
+        }
+        
+        .chart-line { 
+            position: absolute; 
+            bottom: 0; 
+            width: 2px; 
+            background: #238636; 
+            transition: height 0.3s ease;
+        }
+        
+        .filters { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            flex-wrap: wrap;
+        }
+        
+        .filter-input { 
+            background: #21262d; 
+            color: #c9d1d9; 
+            border: 1px solid #30363d; 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            font-size: 12px;
+        }
+        
+        .error-panel { 
+            background: #161b22; 
+            border: 1px solid #da3633; 
+            border-radius: 6px; 
+            margin-bottom: 20px;
+        }
+        
+        .error-panel .table-header { 
+            background: #da3633; 
+            color: white;
+        }
+        
+        .loading { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            border: 2px solid #30363d; 
+            border-top: 2px solid #1f6feb; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .websocket-status {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌐 Network Monitor - Plataforma.app</h1>
+        <p style="color: #7d8590;">Monitora todas as requisições de rede, APIs e conectividade em tempo real</p>
+    </div>
+    
+    <div class="controls">
+        <button onclick="startMonitoring()">▶️ Iniciar Monitoramento</button>
+        <button onclick="stopMonitoring()" class="secondary">⏸️ Parar</button>
+        <button onclick="clearRequests()" class="danger">🗑️ Limpar</button>
+        <button onclick="exportData()" class="secondary">💾 Exportar</button>
+        <button onclick="testEndpoints()" class="secondary">🧪 Testar APIs</button>
+        
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="dot" id="monitoring-status"></div>
+                <span id="monitoring-text">Parado</span>
+            </div>
+            <div class="status-item">
+                <div class="dot" id="network-status"></div>
+                <span id="network-text">Offline</span>
+            </div>
+            <div class="status-item">
+                <span>Requisições/min: <span id="requests-per-minute">0</span></span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-requests">0</div>
+                <div class="stat-label">Total de Requisições</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="success-requests" style="color: #238636;">0</div>
+                <div class="stat-label">Sucessos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="error-requests" style="color: #da3633;">0</div>
+                <div class="stat-label">Erros</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avg-response-time">0ms</div>
+                <div class="stat-label">Tempo Médio</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="data-transferred">0 KB</div>
+                <div class="stat-label">Dados Transferidos</div>
+            </div>
+        </div>
+        
+        <div class="websocket-status">
+            <h3 style="margin-bottom: 10px; color: #f0f6fc;">📡 Status de Conectividade</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="status-item">
+                    <div class="dot" id="vite-ws-status"></div>
+                    <span>Vite WebSocket</span>
+                </div>
+                <div class="status-item">
+                    <div class="dot" id="api-status"></div>
+                    <span>API Backend</span>
+                </div>
+                <div class="status-item">
+                    <div class="dot" id="supabase-status"></div>
+                    <span>Supabase</span>
+                </div>
+                <div class="status-item">
+                    <div class="dot" id="grist-status"></div>
+                    <span>Grist Core</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="table-header">
+                <h3>📈 Gráfico de Requisições por Minuto</h3>
+                <button onclick="clearChart()" class="secondary" style="background: transparent; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 8px; border-radius: 3px; font-size: 10px;">Limpar</button>
+            </div>
+            <div class="chart" id="requests-chart"></div>
+        </div>
+        
+        <div class="filters">
+            <input type="text" class="filter-input" placeholder="Filtrar por URL..." id="url-filter">
+            <select class="filter-input" id="method-filter">
+                <option value="">Todos os Métodos</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+            </select>
+            <select class="filter-input" id="status-filter">
+                <option value="">Todos os Status</option>
+                <option value="2xx">2xx - Sucesso</option>
+                <option value="3xx">3xx - Redirecionamento</option>
+                <option value="4xx">4xx - Erro Cliente</option>
+                <option value="5xx">5xx - Erro Servidor</option>
+            </select>
+        </div>
+        
+        <div class="requests-table">
+            <div class="table-header">
+                <h3>📝 Log de Requisições</h3>
+                <div>
+                    <span style="margin-right: 15px; color: #7d8590;">Total: <span id="filtered-count">0</span></span>
+                    <button onclick="toggleAutoScroll()" id="auto-scroll-btn" class="secondary" style="background: transparent; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 8px; border-radius: 3px; font-size: 10px;">Auto-scroll: ON</button>
+                </div>
+            </div>
+            <div class="table-content" id="table-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tempo</th>
+                            <th>Método</th>
+                            <th>URL</th>
+                            <th>Status</th>
+                            <th>Duração</th>
+                            <th>Tamanho</th>
+                            <th>Tipo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-body">
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: #7d8590; padding: 40px;">
+                                Nenhuma requisição capturada ainda. Clique em "Iniciar Monitoramento" para começar.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="error-panel" id="error-panel" style="display: none;">
+            <div class="table-header">
+                <h3>❌ Erros de Rede</h3>
+                <span id="error-count">0 erros</span>
+            </div>
+            <div class="table-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tempo</th>
+                            <th>URL</th>
+                            <th>Erro</th>
+                            <th>Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="errors-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let isMonitoring = false;
+        let requests = [];
+        let errors = [];
+        let stats = {
+            total: 0,
+            success: 0,
+            error: 0,
+            totalResponseTime: 0,
+            totalDataTransferred: 0
+        };
+        let autoScroll = true;
+        let chartData = [];
+        
+        // Original fetch function
+        const originalFetch = window.fetch;
+        let fetchIntercepted = false;
+        
+        // API endpoints to test
+        const apiEndpoints = [
+            { name: 'Vite Dev Server', url: '/', expectedStatus: 200 },
+            { name: 'API Health', url: '/api/health', expectedStatus: 200 },
+            { name: 'Postgres API', url: '/api/postgres/tables', expectedStatus: 200 },
+            { name: 'Supabase Connection', url: '/api/supabase/status', expectedStatus: 200 }
+        ];
+        
+        // Initialize
+        updateStats();
+        checkConnectivity();
+        setInterval(checkConnectivity, 10000); // Check every 10 seconds
+        
+        function startMonitoring() {
+            if (isMonitoring) return;
+            
+            isMonitoring = true;
+            updateMonitoringStatus('green', 'Ativo');
+            
+            if (!fetchIntercepted) {
+                interceptFetch();
+                interceptXMLHttpRequest();
+                interceptWebSocket();
+                fetchIntercepted = true;
+            }
+            
+            // Clear initial message
+            const tbody = document.getElementById('requests-body');
+            if (tbody.children.length === 1 && tbody.children[0].cells.length === 1) {
+                tbody.innerHTML = '';
+            }
+            
+            console.log('🌐 Network monitoring started');
+        }
+        
+        function stopMonitoring() {
+            isMonitoring = false;
+            updateMonitoringStatus('red', 'Parado');
+            console.log('🌐 Network monitoring stopped');
+        }
+        
+        function interceptFetch() {
+            window.fetch = function(...args) {
+                if (!isMonitoring) return originalFetch.apply(this, args);
+                
+                const url = args[0];
+                const options = args[1] || {};
+                const method = options.method || 'GET';
+                const startTime = Date.now();
+                
+                return originalFetch.apply(this, args)
+                    .then(async (response) => {
+                        const duration = Date.now() - startTime;
+                        const contentLength = response.headers.get('content-length') || 0;
+                        const contentType = response.headers.get('content-type') || 'unknown';
+                        
+                        const request = {
+                            timestamp: new Date(),
+                            method,
+                            url,
+                            status: response.status,
+                            statusText: response.statusText,
+                            duration,
+                            size: parseInt(contentLength) || 0,
+                            contentType,
+                            success: response.ok
+                        };
+                        
+                        addRequest(request);
+                        return response;
+                    })
+                    .catch((error) => {
+                        const duration = Date.now() - startTime;
+                        
+                        const request = {
+                            timestamp: new Date(),
+                            method,
+                            url,
+                            status: 0,
+                            statusText: 'Network Error',
+                            duration,
+                            size: 0,
+                            contentType: 'error',
+                            success: false,
+                            error: error.message
+                        };
+                        
+                        addRequest(request);
+                        addError({
+                            timestamp: new Date(),
+                            url,
+                            error: error.message,
+                            details: error.stack || 'No stack trace available'
+                        });
+                        
+                        return Promise.reject(error);
+                    });
+            };
+        }
+        
+        function interceptXMLHttpRequest() {
+            const originalXHROpen = XMLHttpRequest.prototype.open;
+            const originalXHRSend = XMLHttpRequest.prototype.send;
+            
+            XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+                this._networkMonitor = { method, url, startTime: Date.now() };
+                return originalXHROpen.apply(this, arguments);
+            };
+            
+            XMLHttpRequest.prototype.send = function(data) {
+                if (!isMonitoring || !this._networkMonitor) {
+                    return originalXHRSend.apply(this, arguments);
+                }
+                
+                const monitor = this._networkMonitor;
+                
+                this.addEventListener('loadend', () => {
+                    const duration = Date.now() - monitor.startTime;
+                    const request = {
+                        timestamp: new Date(),
+                        method: monitor.method,
+                        url: monitor.url,
+                        status: this.status,
+                        statusText: this.statusText,
+                        duration,
+                        size: this.responseText ? this.responseText.length : 0,
+                        contentType: this.getResponseHeader('content-type') || 'unknown',
+                        success: this.status >= 200 && this.status < 300
+                    };
+                    
+                    addRequest(request);
+                });
+                
+                return originalXHRSend.apply(this, arguments);
+            };
+        }
+        
+        function interceptWebSocket() {
+            const originalWebSocket = window.WebSocket;
+            
+            window.WebSocket = function(...args) {
+                const ws = new originalWebSocket(...args);
+                
+                if (isMonitoring) {
+                    ws.addEventListener('open', () => {
+                        addRequest({
+                            timestamp: new Date(),
+                            method: 'WS',
+                            url: args[0],
+                            status: 101,
+                            statusText: 'Switching Protocols',
+                            duration: 0,
+                            size: 0,
+                            contentType: 'websocket',
+                            success: true
+                        });
+                    });
+                    
+                    ws.addEventListener('error', (error) => {
+                        addError({
+                            timestamp: new Date(),
+                            url: args[0],
+                            error: 'WebSocket connection error',
+                            details: error.toString()
+                        });
+                    });
+                }
+                
+                return ws;
+            };
+        }
+        
+        function addRequest(request) {
+            requests.unshift(request);
+            if (requests.length > 1000) requests.pop();
+            
+            // Update stats
+            stats.total++;
+            if (request.success) stats.success++;
+            else stats.error++;
+            stats.totalResponseTime += request.duration;
+            stats.totalDataTransferred += request.size;
+            
+            updateStats();
+            updateRequestsTable();
+            updateChart();
+        }
+        
+        function addError(error) {
+            errors.unshift(error);
+            if (errors.length > 100) errors.pop();
+            
+            updateErrorsPanel();
+        }
+        
+        function updateStats() {
+            document.getElementById('total-requests').textContent = stats.total;
+            document.getElementById('success-requests').textContent = stats.success;
+            document.getElementById('error-requests').textContent = stats.error;
+            
+            const avgTime = stats.total > 0 ? Math.round(stats.totalResponseTime / stats.total) : 0;
+            document.getElementById('avg-response-time').textContent = avgTime + 'ms';
+            
+            const totalKB = Math.round(stats.totalDataTransferred / 1024);
+            document.getElementById('data-transferred').textContent = totalKB + ' KB';
+            
+            // Calculate requests per minute
+            const now = Date.now();
+            const oneMinuteAgo = now - 60000;
+            const recentRequests = requests.filter(req => req.timestamp.getTime() > oneMinuteAgo);
+            document.getElementById('requests-per-minute').textContent = recentRequests.length;
+        }
+        
+        function updateRequestsTable() {
+            const tbody = document.getElementById('requests-body');
+            const filters = getFilters();
+            const filteredRequests = applyFilters(requests, filters);
+            
+            document.getElementById('filtered-count').textContent = filteredRequests.length;
+            
+            tbody.innerHTML = '';
+            
+            filteredRequests.slice(0, 100).forEach(request => {
+                const row = createRequestRow(request);
+                tbody.appendChild(row);
+            });
+            
+            if (autoScroll) {
+                const tableContent = document.getElementById('table-content');
+                tableContent.scrollTop = 0;
+            }
+        }
+        
+        function createRequestRow(request) {
+            const row = document.createElement('tr');
+            
+            const methodClass = request.method.toLowerCase();
+            const statusClass = request.status >= 200 && request.status < 300 ? 'success' : 
+                               request.status >= 400 ? 'error' : 'warning';
+            const durationClass = request.duration < 100 ? 'fast' : 
+                                 request.duration < 1000 ? 'slow' : 'very-slow';
+            
+            row.innerHTML = \`
+                <td>\${request.timestamp.toLocaleTimeString()}</td>
+                <td><span class="method \${methodClass.toUpperCase()}">\${request.method}</span></td>
+                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;" title="\${request.url}">\${request.url}</td>
+                <td><span class="status-code \${statusClass}">\${request.status}</span></td>
+                <td class="duration \${durationClass}">\${request.duration}ms</td>
+                <td>\${formatBytes(request.size)}</td>
+                <td>\${request.contentType.split(';')[0]}</td>
+            \`;
+            
+            return row;
+        }
+        
+        function updateErrorsPanel() {
+            const errorPanel = document.getElementById('error-panel');
+            const errorsBody = document.getElementById('errors-body');
+            const errorCount = document.getElementById('error-count');
+            
+            if (errors.length > 0) {
+                errorPanel.style.display = 'block';
+                errorCount.textContent = \`\${errors.length} \${errors.length === 1 ? 'erro' : 'erros'}\`;
+                
+                errorsBody.innerHTML = '';
+                errors.slice(0, 50).forEach(error => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = \`
+                        <td>\${error.timestamp.toLocaleTimeString()}</td>
+                        <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;" title="\${error.url}">\${error.url}</td>
+                        <td>\${error.error}</td>
+                        <td><details><summary>Ver detalhes</summary><pre style="font-size: 10px; margin-top: 5px;">\${error.details}</pre></details></td>
+                    \`;
+                    errorsBody.appendChild(row);
+                });
+            }
+        }
+        
+        function updateChart() {
+            const chart = document.getElementById('requests-chart');
+            const now = Date.now();
+            const tenMinutesAgo = now - 600000; // 10 minutes
+            
+            // Group requests by minute
+            const minuteGroups = {};
+            requests.forEach(request => {
+                if (request.timestamp.getTime() > tenMinutesAgo) {
+                    const minute = Math.floor(request.timestamp.getTime() / 60000) * 60000;
+                    minuteGroups[minute] = (minuteGroups[minute] || 0) + 1;
+                }
+            });
+            
+            chartData = Object.entries(minuteGroups).map(([time, count]) => ({
+                time: parseInt(time),
+                count
+            })).sort((a, b) => a.time - b.time);
+            
+            // Render chart
+            chart.innerHTML = '';
+            const maxCount = Math.max(...chartData.map(d => d.count), 1);
+            const chartWidth = chart.clientWidth;
+            const barWidth = Math.max(2, chartWidth / Math.max(chartData.length, 10));
+            
+            chartData.forEach((data, index) => {
+                const bar = document.createElement('div');
+                bar.className = 'chart-line';
+                bar.style.left = \`\${index * barWidth}px\`;
+                bar.style.height = \`\${(data.count / maxCount) * 180}px\`;
+                bar.style.width = \`\${barWidth - 1}px\`;
+                bar.title = \`\${new Date(data.time).toLocaleTimeString()}: \${data.count} requisições\`;
+                chart.appendChild(bar);
+            });
+        }
+        
+        function getFilters() {
+            return {
+                url: document.getElementById('url-filter').value.toLowerCase(),
+                method: document.getElementById('method-filter').value,
+                status: document.getElementById('status-filter').value
+            };
+        }
+        
+        function applyFilters(requests, filters) {
+            return requests.filter(request => {
+                if (filters.url && !request.url.toLowerCase().includes(filters.url)) {
+                    return false;
+                }
+                if (filters.method && request.method !== filters.method) {
+                    return false;
+                }
+                if (filters.status) {
+                    const statusRange = filters.status;
+                    const status = request.status;
+                    if (statusRange === '2xx' && (status < 200 || status >= 300)) return false;
+                    if (statusRange === '3xx' && (status < 300 || status >= 400)) return false;
+                    if (statusRange === '4xx' && (status < 400 || status >= 500)) return false;
+                    if (statusRange === '5xx' && status < 500) return false;
+                }
+                return true;
+            });
+        }
+        
+        async function checkConnectivity() {
+            // Check Vite WebSocket
+            try {
+                const wsUrl = \`ws://\${location.host}/\`;
+                // Note: This is a simplified check. In practice, you'd need to implement proper WS testing
+                updateConnectivityStatus('vite-ws', 'yellow');
+            } catch {
+                updateConnectivityStatus('vite-ws', 'red');
+            }
+            
+            // Check API endpoints
+            const results = await Promise.allSettled(
+                apiEndpoints.map(endpoint => 
+                    fetch(endpoint.url, { method: 'GET' })
+                        .then(response => ({ endpoint, status: response.status, ok: response.ok }))
+                        .catch(error => ({ endpoint, error: error.message }))
+                )
+            );
+            
+            results.forEach((result, index) => {
+                const endpoint = apiEndpoints[index];
+                let status = 'red';
+                
+                if (result.status === 'fulfilled' && result.value.ok) {
+                    status = 'green';
+                } else if (result.status === 'fulfilled') {
+                    status = 'yellow';
+                }
+                
+                if (endpoint.name === 'API Health') {
+                    updateConnectivityStatus('api', status);
+                } else if (endpoint.name === 'Supabase Connection') {
+                    updateConnectivityStatus('supabase', status);
+                }
+            });
+            
+            // Update overall network status
+            const anyGreen = document.querySelectorAll('.dot.green').length > 0;
+            updateNetworkStatus(anyGreen ? 'green' : 'red', anyGreen ? 'Online' : 'Offline');
+        }
+        
+        function updateConnectivityStatus(id, status) {
+            const dot = document.getElementById(\`\${id}-status\`);
+            if (dot) {
+                dot.className = \`dot \${status}\`;
+            }
+        }
+        
+        function updateMonitoringStatus(status, text) {
+            document.getElementById('monitoring-status').className = \`dot \${status}\`;
+            document.getElementById('monitoring-text').textContent = text;
+        }
+        
+        function updateNetworkStatus(status, text) {
+            document.getElementById('network-status').className = \`dot \${status}\`;
+            document.getElementById('network-text').textContent = text;
+        }
+        
+        async function testEndpoints() {
+            console.log('🧪 Testing API endpoints...');
+            
+            for (const endpoint of apiEndpoints) {
+                try {
+                    const response = await fetch(endpoint.url);
+                    console.log(\`\${endpoint.name}: \${response.status} \${response.statusText}\`);
+                } catch (error) {
+                    console.log(\`\${endpoint.name}: Error - \${error.message}\`);
+                }
+            }
+            
+            await checkConnectivity();
+        }
+        
+        function clearRequests() {
+            if (confirm('Limpar todas as requisições?')) {
+                requests = [];
+                errors = [];
+                stats = { total: 0, success: 0, error: 0, totalResponseTime: 0, totalDataTransferred: 0 };
+                chartData = [];
+                
+                updateStats();
+                updateRequestsTable();
+                updateErrorsPanel();
+                updateChart();
+                
+                document.getElementById('error-panel').style.display = 'none';
+            }
+        }
+        
+        function clearChart() {
+            chartData = [];
+            updateChart();
+        }
+        
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            const btn = document.getElementById('auto-scroll-btn');
+            btn.textContent = autoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF';
+        }
+        
+        function exportData() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                session: {
+                    monitoring: isMonitoring,
+                    duration: Date.now() - (requests[requests.length - 1]?.timestamp.getTime() || Date.now())
+                },
+                stats,
+                requests: requests.map(r => ({
+                    ...r,
+                    timestamp: r.timestamp.toISOString()
+                })),
+                errors: errors.map(e => ({
+                    ...e,
+                    timestamp: e.timestamp.toISOString()
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = \`network-monitor-\${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json\`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        // Event listeners for filters
+        ['url-filter', 'method-filter', 'status-filter'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateRequestsTable);
+            document.getElementById(id).addEventListener('change', updateRequestsTable);
+        });
+        
+        // Auto-start monitoring
+        setTimeout(() => {
+            startMonitoring();
+            console.log('🌐 Network monitoring auto-started');
+        }, 1000);
+    </script>
+</body>
+</html>

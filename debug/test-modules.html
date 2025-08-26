@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Tester - Plataforma.app</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Consolas', 'Monaco', monospace; background: #0d1117; color: #c9d1d9; }
+        
+        .header { background: #21262d; padding: 20px; border-bottom: 1px solid #30363d; }
+        .header h1 { color: #f0f6fc; margin-bottom: 10px; }
+        
+        .controls { background: #161b22; padding: 15px; border-bottom: 1px solid #30363d; }
+        .controls button { 
+            background: #238636; color: white; border: none; padding: 8px 16px; 
+            border-radius: 6px; margin-right: 10px; cursor: pointer; font-size: 12px;
+        }
+        .controls button:hover { background: #2ea043; }
+        .controls button.secondary { background: #21262d; }
+        
+        .main { padding: 20px; }
+        
+        .module-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px;
+        }
+        
+        .module-card { 
+            background: #161b22; 
+            border: 1px solid #30363d; 
+            border-radius: 8px; 
+            padding: 20px;
+            position: relative;
+        }
+        
+        .module-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 15px;
+        }
+        
+        .module-name { color: #f0f6fc; font-size: 16px; font-weight: bold; }
+        .module-status { 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 11px; 
+            font-weight: bold;
+        }
+        .status-loading { background: #bf8700; color: white; }
+        .status-success { background: #238636; color: white; }
+        .status-error { background: #da3633; color: white; }
+        .status-warning { background: #bf8700; color: white; }
+        
+        .module-info { font-size: 12px; color: #7d8590; margin-bottom: 15px; }
+        .module-path { font-family: monospace; background: #0d1117; padding: 8px; border-radius: 4px; margin-bottom: 10px; }
+        
+        .test-results { margin-top: 15px; }
+        .test-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 5px 0; 
+            font-size: 12px;
+        }
+        
+        .error-details { 
+            background: #0d1117; 
+            border: 1px solid #da3633; 
+            border-radius: 4px; 
+            padding: 10px; 
+            margin-top: 10px; 
+            font-size: 11px; 
+            color: #ffa198;
+        }
+        
+        .progress-bar { 
+            width: 100%; 
+            height: 6px; 
+            background: #21262d; 
+            border-radius: 3px; 
+            margin: 20px 0;
+        }
+        .progress-fill { 
+            height: 100%; 
+            background: #238636; 
+            border-radius: 3px; 
+            transition: width 0.3s ease;
+        }
+        
+        .summary { 
+            background: #161b22; 
+            border: 1px solid #30363d; 
+            border-radius: 8px; 
+            padding: 20px; 
+            margin-bottom: 20px;
+        }
+        
+        .summary-stats { 
+            display: flex; 
+            gap: 30px; 
+            justify-content: center;
+        }
+        
+        .stat { text-align: center; }
+        .stat-number { font-size: 32px; font-weight: bold; color: #f0f6fc; }
+        .stat-label { color: #7d8590; font-size: 12px; }
+        
+        .loading { 
+            display: inline-block; 
+            width: 12px; 
+            height: 12px; 
+            border: 2px solid #30363d; 
+            border-top: 2px solid #1f6feb; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Module Tester - Plataforma.app</h1>
+        <p style="color: #7d8590;">Testa individualmente cada módulo da aplicação para identificar problemas específicos</p>
+    </div>
+    
+    <div class="controls">
+        <button onclick="testAllModules()">🔄 Testar Todos os Módulos</button>
+        <button onclick="testCoreModules()" class="secondary">⚡ Testar Módulos Core</button>
+        <button onclick="testLazyModules()" class="secondary">📦 Testar Módulos Lazy</button>
+        <button onclick="clearResults()" class="secondary">🗑️ Limpar Resultados</button>
+    </div>
+    
+    <div class="main">
+        <div class="summary">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #f0f6fc;">📊 Resumo dos Testes</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="summary-stats">
+                <div class="stat">
+                    <div class="stat-number" id="total-modules">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="success-modules" style="color: #238636;">0</div>
+                    <div class="stat-label">Sucessos</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="error-modules" style="color: #da3633;">0</div>
+                    <div class="stat-label">Erros</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="warning-modules" style="color: #bf8700;">0</div>
+                    <div class="stat-label">Avisos</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="module-grid" id="modules-container">
+            <!-- Modules will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Module definitions
+        const modules = [
+            // Core modules
+            { name: 'React', path: 'react', type: 'core', description: 'React library' },
+            { name: 'React DOM', path: 'react-dom/client', type: 'core', description: 'React DOM client' },
+            { name: 'Main App', path: '/client/main.tsx', type: 'core', description: 'Main application entry point' },
+            { name: 'App Component', path: '/client/App.tsx', type: 'core', description: 'Root App component' },
+            
+            // Lazy loaded modules
+            { name: 'IA Module', path: '/client/pages/IAModule.tsx', type: 'lazy', description: 'Inteligência Artificial module' },
+            { name: 'Database Module', path: '/client/pages/DatabaseModule.tsx', type: 'lazy', description: 'Database management module' },
+            { name: 'Sistema Module', path: '/client/pages/SistemaModule.tsx', type: 'lazy', description: 'System settings module' },
+            { name: 'Vendas Module', path: '/client/pages/VendasModule.tsx', type: 'lazy', description: 'Sales module' },
+            { name: 'Estoque Module', path: '/client/pages/EstoqueModule.tsx', type: 'lazy', description: 'Inventory module' },
+            { name: 'RH Module', path: '/client/pages/RHModule.tsx', type: 'lazy', description: 'Human Resources module' },
+            { name: 'Financeiro Module', path: '/client/pages/FinanceiroModule.tsx', type: 'lazy', description: 'Financial module' },
+            { name: 'Montagem Module', path: '/client/pages/MontagemModule.tsx', type: 'lazy', description: 'Assembly module' },
+            { name: 'Administrativo Module', path: '/client/pages/AdministrativoModule.tsx', type: 'lazy', description: 'Administrative module' },
+            { name: 'Expedicao Module', path: '/client/pages/ExpedicaoModule.tsx', type: 'lazy', description: 'Shipping module' },
+            { name: 'Tributario Module', path: '/client/pages/TributarioModule.tsx', type: 'lazy', description: 'Tax module' },
+            { name: 'Marketing Module', path: '/client/pages/MarketingModule.tsx', type: 'lazy', description: 'Marketing module' },
+            { name: 'Cadastros Module', path: '/client/pages/CadastrosModule.tsx', type: 'lazy', description: 'Registry module' },
+            { name: 'Lojas Module', path: '/client/pages/LojasModule.tsx', type: 'lazy', description: 'Stores module' },
+            { name: 'Suporte Module', path: '/client/pages/SuporteModule.tsx', type: 'lazy', description: 'Support module' },
+            { name: 'Faturamento Module', path: '/client/pages/FaturamentoModule.tsx', type: 'lazy', description: 'Billing module' },
+            { name: 'Juridico Module', path: '/client/pages/JuridicoModule.tsx', type: 'lazy', description: 'Legal module' },
+            { name: 'Produtos Module', path: '/client/pages/ProdutosModule.tsx', type: 'lazy', description: 'Products module' },
+            { name: 'Comunicacao Module', path: '/client/pages/ComunicacaoModule.tsx', type: 'lazy', description: 'Communication module' },
+            
+            // Critical components
+            { name: 'TableEditorCanvas', path: '/client/pages/windows/TableEditorCanvas.tsx', type: 'component', description: 'Main table editor component' },
+            { name: 'CellRenderer', path: '/client/components/TableEditor/CellRenderer.tsx', type: 'component', description: 'Table cell renderer' },
+            { name: 'ColumnFilterControl', path: '/client/components/TableEditor/ColumnFilterControl.tsx', type: 'component', description: 'Column filter control' },
+        ];
+        
+        let testResults = {};
+        let currentTestIndex = 0;
+        let isRunning = false;
+        
+        // Initialize
+        document.getElementById('total-modules').textContent = modules.length;
+        renderModules();
+        
+        function renderModules() {
+            const container = document.getElementById('modules-container');
+            container.innerHTML = '';
+            
+            modules.forEach((module, index) => {
+                const card = createModuleCard(module, index);
+                container.appendChild(card);
+            });
+        }
+        
+        function createModuleCard(module, index) {
+            const result = testResults[module.name] || { status: 'pending' };
+            
+            const div = document.createElement('div');
+            div.className = 'module-card';
+            div.innerHTML = \`
+                <div class="module-header">
+                    <div class="module-name">\${module.name}</div>
+                    <div class="module-status status-\${result.status}">
+                        \${getStatusText(result.status)}
+                    </div>
+                </div>
+                <div class="module-info">\${module.description}</div>
+                <div class="module-path">\${module.path}</div>
+                <div class="test-results">
+                    <div class="test-item">
+                        <span>Tipo:</span>
+                        <span>\${module.type}</span>
+                    </div>
+                    <div class="test-item">
+                        <span>Status:</span>
+                        <span id="status-\${index}">\${result.status === 'loading' ? '<div class="loading"></div>' : getStatusText(result.status)}</span>
+                    </div>
+                    <div class="test-item">
+                        <span>Tempo:</span>
+                        <span id="time-\${index}">\${result.duration ? result.duration + 'ms' : '--'}</span>
+                    </div>
+                </div>
+                \${result.error ? \`
+                    <div class="error-details">
+                        <strong>Erro:</strong> \${result.error.message}<br>
+                        \${result.error.stack ? \`<details><summary>Stack Trace</summary><pre>\${result.error.stack}</pre></details>\` : ''}
+                    </div>
+                \` : ''}
+                <div style="margin-top: 15px;">
+                    <button onclick="testSingleModule(\${index})" 
+                            style="background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                        🧪 Testar Individualmente
+                    </button>
+                </div>
+            \`;
+            return div;
+        }
+        
+        function getStatusText(status) {
+            switch(status) {
+                case 'loading': return 'Testando...';
+                case 'success': return '✅ Sucesso';
+                case 'error': return '❌ Erro';
+                case 'warning': return '⚠️ Aviso';
+                default: return '⏳ Pendente';
+            }
+        }
+        
+        async function testAllModules() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            currentTestIndex = 0;
+            testResults = {};
+            
+            console.log('🚀 Iniciando teste de todos os módulos...');
+            
+            for (let i = 0; i < modules.length; i++) {
+                currentTestIndex = i;
+                updateProgress();
+                await testModule(modules[i], i);
+            }
+            
+            isRunning = false;
+            updateSummary();
+            console.log('✅ Teste de todos os módulos concluído');
+        }
+        
+        async function testCoreModules() {
+            const coreModules = modules.filter(m => m.type === 'core');
+            await testModulesList(coreModules);
+        }
+        
+        async function testLazyModules() {
+            const lazyModules = modules.filter(m => m.type === 'lazy');
+            await testModulesList(lazyModules);
+        }
+        
+        async function testModulesList(moduleList) {
+            if (isRunning) return;
+            
+            isRunning = true;
+            
+            for (let i = 0; i < moduleList.length; i++) {
+                const moduleIndex = modules.indexOf(moduleList[i]);
+                await testModule(moduleList[i], moduleIndex);
+            }
+            
+            isRunning = false;
+            updateSummary();
+        }
+        
+        async function testSingleModule(index) {
+            await testModule(modules[index], index);
+            updateSummary();
+        }
+        
+        async function testModule(module, index) {
+            const startTime = Date.now();
+            
+            // Set loading state
+            testResults[module.name] = { status: 'loading', duration: null, error: null };
+            renderModules();
+            
+            try {
+                console.log(\`Testing module: \${module.name}\`);
+                
+                // Attempt to import the module
+                const imported = await import(module.path);
+                const duration = Date.now() - startTime;
+                
+                // Check if import was successful
+                if (imported) {
+                    // Additional checks based on module type
+                    let status = 'success';
+                    let error = null;
+                    
+                    if (module.type === 'core') {
+                        // Core modules should have specific exports
+                        if (module.name === 'React' && !imported.createElement) {
+                            status = 'warning';
+                            error = { message: 'React.createElement not found' };
+                        }
+                    } else if (module.type === 'lazy') {
+                        // Lazy modules should have default export
+                        if (!imported.default) {
+                            status = 'warning';
+                            error = { message: 'Default export not found' };
+                        }
+                    }
+                    
+                    testResults[module.name] = { status, duration, error };
+                    console.log(\`✅ \${module.name}: \${status} (\${duration}ms)\`);
+                } else {
+                    testResults[module.name] = { 
+                        status: 'error', 
+                        duration: Date.now() - startTime, 
+                        error: { message: 'Module imported but is null/undefined' }
+                    };
+                    console.log(\`❌ \${module.name}: Module is null\`);
+                }
+                
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                testResults[module.name] = { status: 'error', duration, error };
+                console.log(\`❌ \${module.name}: \${error.message}\`);
+            }
+            
+            renderModules();
+        }
+        
+        function updateProgress() {
+            const progress = ((currentTestIndex + 1) / modules.length) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }
+        
+        function updateSummary() {
+            const stats = {
+                total: modules.length,
+                success: 0,
+                error: 0,
+                warning: 0
+            };
+            
+            Object.values(testResults).forEach(result => {
+                if (result.status === 'success') stats.success++;
+                else if (result.status === 'error') stats.error++;
+                else if (result.status === 'warning') stats.warning++;
+            });
+            
+            document.getElementById('total-modules').textContent = stats.total;
+            document.getElementById('success-modules').textContent = stats.success;
+            document.getElementById('error-modules').textContent = stats.error;
+            document.getElementById('warning-modules').textContent = stats.warning;
+        }
+        
+        function clearResults() {
+            if (confirm('Limpar todos os resultados dos testes?')) {
+                testResults = {};
+                currentTestIndex = 0;
+                document.getElementById('progress-bar').style.width = '0%';
+                renderModules();
+                updateSummary();
+            }
+        }
+        
+        // Auto-test core modules on load
+        setTimeout(() => {
+            console.log('Auto-testing core modules...');
+            testCoreModules();
+        }, 1000);
+    </script>
+</body>
+</html>

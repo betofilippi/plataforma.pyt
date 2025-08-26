@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug System - Plataforma.app</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Consolas', 'Monaco', monospace; background: #0d1117; color: #c9d1d9; }
+        
+        .header { background: #21262d; padding: 20px; border-bottom: 1px solid #30363d; }
+        .header h1 { color: #f0f6fc; margin-bottom: 10px; }
+        .status { display: flex; gap: 20px; align-items: center; }
+        .status-item { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.green { background: #238636; }
+        .dot.red { background: #da3633; }
+        .dot.yellow { background: #bf8700; }
+        
+        .controls { background: #161b22; padding: 15px; border-bottom: 1px solid #30363d; }
+        .controls button { 
+            background: #238636; color: white; border: none; padding: 8px 16px; 
+            border-radius: 6px; margin-right: 10px; cursor: pointer; font-size: 12px;
+        }
+        .controls button:hover { background: #2ea043; }
+        .controls button.secondary { background: #21262d; }
+        .controls button.danger { background: #da3633; }
+        
+        .main { display: flex; height: calc(100vh - 120px); }
+        .sidebar { width: 200px; background: #0d1117; border-right: 1px solid #30363d; padding: 15px; }
+        .content { flex: 1; padding: 20px; overflow-y: auto; }
+        
+        .filter-btn { 
+            display: block; width: 100%; text-align: left; background: transparent; 
+            color: #7d8590; border: none; padding: 8px 12px; border-radius: 6px; 
+            margin-bottom: 5px; cursor: pointer; font-size: 12px;
+        }
+        .filter-btn.active { background: #1f6feb; color: white; }
+        .filter-btn:hover { background: #21262d; }
+        
+        .log-entry { 
+            border: 1px solid #30363d; border-radius: 6px; margin-bottom: 10px; 
+            background: #161b22; overflow: hidden;
+        }
+        .log-header { 
+            padding: 10px 15px; background: #21262d; display: flex; 
+            justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .log-content { padding: 15px; display: none; }
+        .log-content.expanded { display: block; }
+        
+        .error { border-left: 4px solid #da3633; }
+        .warning { border-left: 4px solid #bf8700; }
+        .info { border-left: 4px solid #1f6feb; }
+        .success { border-left: 4px solid #238636; }
+        
+        .timestamp { color: #7d8590; font-size: 11px; }
+        .stack-trace { background: #0d1117; padding: 10px; border-radius: 4px; font-size: 11px; overflow-x: auto; }
+        
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .stat-card { background: #161b22; padding: 15px; border-radius: 6px; border: 1px solid #30363d; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #f0f6fc; }
+        .stat-label { color: #7d8590; font-size: 12px; }
+        
+        .auto-test { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 15px; margin-bottom: 20px; }
+        .test-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        
+        .loading { display: inline-block; width: 12px; height: 12px; border: 2px solid #30363d; border-top: 2px solid #1f6feb; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Debug System - Plataforma.app</h1>
+        <div class="status">
+            <div class="status-item">
+                <div class="dot" id="server-status"></div>
+                <span id="server-text">Servidor: Verificando...</span>
+            </div>
+            <div class="status-item">
+                <div class="dot" id="app-status"></div>
+                <span id="app-text">Aplicação: Verificando...</span>
+            </div>
+            <div class="status-item">
+                <div class="dot" id="network-status"></div>
+                <span id="network-text">Rede: Verificando...</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button onclick="runFullDiagnostic()">🔄 Diagnóstico Completo</button>
+        <button onclick="clearLogs()" class="danger">🗑️ Limpar Logs</button>
+        <button onclick="exportLogs()" class="secondary">💾 Exportar Logs</button>
+        <button onclick="toggleAutoRefresh()" id="auto-refresh-btn" class="secondary">⏸️ Auto-Refresh: ON</button>
+        <span style="margin-left: 20px; color: #7d8590;">Última atualização: <span id="last-update">--:--:--</span></span>
+    </div>
+    
+    <div class="main">
+        <div class="sidebar">
+            <h3 style="margin-bottom: 15px; color: #f0f6fc;">Filtros</h3>
+            <button class="filter-btn active" onclick="filterLogs('all')">📋 Todos (0)</button>
+            <button class="filter-btn" onclick="filterLogs('error')">❌ Erros (0)</button>
+            <button class="filter-btn" onclick="filterLogs('warning')">⚠️ Avisos (0)</button>
+            <button class="filter-btn" onclick="filterLogs('info')">ℹ️ Info (0)</button>
+            <button class="filter-btn" onclick="filterLogs('network')">🌐 Rede (0)</button>
+            <button class="filter-btn" onclick="filterLogs('react')">⚛️ React (0)</button>
+        </div>
+        
+        <div class="content">
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-errors">0</div>
+                    <div class="stat-label">Total de Erros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="session-time">00:00</div>
+                    <div class="stat-label">Tempo de Sessão</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="network-requests">0</div>
+                    <div class="stat-label">Requisições</div>
+                </div>
+            </div>
+            
+            <div class="auto-test">
+                <h3 style="margin-bottom: 15px; color: #f0f6fc;">🧪 Testes Automáticos</h3>
+                <div class="test-item">
+                    <span>Servidor Vite</span>
+                    <span id="test-vite"><div class="loading"></div></span>
+                </div>
+                <div class="test-item">
+                    <span>Main.tsx Import</span>
+                    <span id="test-main"><div class="loading"></div></span>
+                </div>
+                <div class="test-item">
+                    <span>React Components</span>
+                    <span id="test-react"><div class="loading"></div></span>
+                </div>
+                <div class="test-item">
+                    <span>CSS Stylesheets</span>
+                    <span id="test-css"><div class="loading"></div></span>
+                </div>
+                <div class="test-item">
+                    <span>API Connectivity</span>
+                    <span id="test-api"><div class="loading"></div></span>
+                </div>
+            </div>
+            
+            <div id="logs-container">
+                <div class="log-entry info">
+                    <div class="log-header">
+                        <span>🚀 Debug System Iniciado</span>
+                        <span class="timestamp" id="start-time"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let logs = [];
+        let currentFilter = 'all';
+        let autoRefresh = true;
+        let sessionStart = Date.now();
+        let stats = { errors: 0, warnings: 0, info: 0, network: 0 };
+
+        // Initialize debug system
+        document.getElementById('start-time').textContent = new Date().toLocaleTimeString();
+        
+        // Intercept all console methods
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
+        };
+
+        console.error = function(...args) {
+            addLog('error', 'Console Error', args.join(' '), new Error().stack);
+            originalConsole.error.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            addLog('warning', 'Console Warning', args.join(' '));
+            originalConsole.warn.apply(console, args);
+        };
+
+        console.log = function(...args) {
+            addLog('info', 'Console Log', args.join(' '));
+            originalConsole.log.apply(console, args);
+        };
+
+        // Global error handler
+        window.addEventListener('error', function(e) {
+            addLog('error', 'JavaScript Error', e.message, e.error?.stack, {
+                filename: e.filename,
+                lineno: e.lineno,
+                colno: e.colno
+            });
+        });
+
+        // Unhandled promise rejection
+        window.addEventListener('unhandledrejection', function(e) {
+            addLog('error', 'Unhandled Promise Rejection', e.reason?.message || e.reason, e.reason?.stack);
+        });
+
+        // Network request monitoring
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            const startTime = Date.now();
+            
+            return originalFetch.apply(this, args)
+                .then(response => {
+                    const duration = Date.now() - startTime;
+                    addLog('network', 'Network Request', \`\${response.status} \${url} (\${duration}ms)\`, null, {
+                        status: response.status,
+                        url: url,
+                        duration: duration
+                    });
+                    stats.network++;
+                    return response;
+                })
+                .catch(error => {
+                    const duration = Date.now() - startTime;
+                    addLog('error', 'Network Error', \`Failed to fetch \${url}: \${error.message}\`, error.stack, {
+                        url: url,
+                        duration: duration
+                    });
+                    return Promise.reject(error);
+                });
+        };
+
+        // Add log entry
+        function addLog(type, category, message, stack = null, metadata = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const log = {
+                id: Date.now() + Math.random(),
+                type,
+                category,
+                message,
+                stack,
+                metadata,
+                timestamp
+            };
+            
+            logs.unshift(log);
+            if (logs.length > 1000) logs.pop(); // Keep only last 1000 logs
+            
+            stats[type === 'error' ? 'errors' : type === 'warning' ? 'warnings' : 'info']++;
+            
+            updateDisplay();
+        }
+
+        // Update display
+        function updateDisplay() {
+            updateStats();
+            updateFilters();
+            renderLogs();
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('total-errors').textContent = stats.errors;
+            document.getElementById('network-requests').textContent = stats.network;
+            
+            const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('session-time').textContent = \`\${minutes.toString().padStart(2, '0')}:\${seconds.toString().padStart(2, '0')}\`;
+        }
+
+        // Update filter buttons
+        function updateFilters() {
+            const counts = {
+                all: logs.length,
+                error: logs.filter(l => l.type === 'error').length,
+                warning: logs.filter(l => l.type === 'warning').length,
+                info: logs.filter(l => l.type === 'info').length,
+                network: logs.filter(l => l.type === 'network').length,
+                react: logs.filter(l => l.category.includes('React')).length
+            };
+            
+            Object.keys(counts).forEach(type => {
+                const btn = document.querySelector(\`.filter-btn[onclick*="\${type}"]\`);
+                if (btn) {
+                    const text = btn.textContent.replace(/\\(\\d+\\)/, \`(\${counts[type]})\`);
+                    btn.textContent = text;
+                }
+            });
+        }
+
+        // Render logs
+        function renderLogs() {
+            const container = document.getElementById('logs-container');
+            const filteredLogs = currentFilter === 'all' 
+                ? logs 
+                : logs.filter(log => log.type === currentFilter || log.category.toLowerCase().includes(currentFilter));
+            
+            // Keep the first "Debug System Iniciado" entry
+            const existingFirstEntry = container.children[0];
+            container.innerHTML = '';
+            if (existingFirstEntry) container.appendChild(existingFirstEntry);
+            
+            filteredLogs.forEach(log => {
+                const logElement = createLogElement(log);
+                container.appendChild(logElement);
+            });
+        }
+
+        // Create log element
+        function createLogElement(log) {
+            const div = document.createElement('div');
+            div.className = \`log-entry \${log.type}\`;
+            div.innerHTML = \`
+                <div class="log-header" onclick="toggleLogContent(this)">
+                    <span><strong>\${log.category}:</strong> \${log.message}</span>
+                    <span class="timestamp">\${log.timestamp}</span>
+                </div>
+                <div class="log-content">
+                    \${log.metadata ? \`<div><strong>Metadata:</strong> <pre>\${JSON.stringify(log.metadata, null, 2)}</pre></div>\` : ''}
+                    \${log.stack ? \`<div class="stack-trace"><strong>Stack Trace:</strong><br>\${log.stack}</div>\` : ''}
+                </div>
+            \`;
+            return div;
+        }
+
+        // Toggle log content
+        function toggleLogContent(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('expanded');
+        }
+
+        // Filter functions
+        function filterLogs(type) {
+            currentFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(\`.filter-btn[onclick*="\${type}"]\`).classList.add('active');
+            renderLogs();
+        }
+
+        function clearLogs() {
+            if (confirm('Limpar todos os logs?')) {
+                logs = [];
+                stats = { errors: 0, warnings: 0, info: 0, network: 0 };
+                updateDisplay();
+            }
+        }
+
+        function exportLogs() {
+            const data = {
+                session: {
+                    start: new Date(sessionStart).toISOString(),
+                    duration: Date.now() - sessionStart,
+                    userAgent: navigator.userAgent
+                },
+                stats,
+                logs
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = \`debug-logs-\${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json\`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('auto-refresh-btn');
+            btn.textContent = autoRefresh ? '⏸️ Auto-Refresh: ON' : '▶️ Auto-Refresh: OFF';
+        }
+
+        // Auto-diagnostic functions
+        async function runFullDiagnostic() {
+            console.log('Starting full diagnostic...');
+            addLog('info', 'Diagnostic', 'Iniciando diagnóstico completo...');
+            
+            try {
+                await testViteServer();
+                await testMainImport();
+                await testReactComponents();
+                await testCSSStylesheets();
+                await testAPIConnectivity();
+                
+                addLog('success', 'Diagnostic', 'Diagnóstico completo finalizado');
+            } catch (error) {
+                console.error('Diagnostic error:', error);
+                addLog('error', 'Diagnostic', 'Erro no diagnóstico: ' + error.message, error.stack);
+                // Set default status if diagnostic fails
+                updateServerStatus('yellow', 'Servidor: Status desconhecido');
+                updateAppStatus('yellow', 'Aplicação: Status desconhecido');
+                updateNetworkStatus('yellow', 'Rede: Status desconhecido');
+            }
+        }
+
+        async function testViteServer() {
+            try {
+                const response = await fetch('/');
+                if (response.ok) {
+                    setTestStatus('test-vite', '✅ OK');
+                    updateServerStatus('green', 'Servidor: Online');
+                } else {
+                    setTestStatus('test-vite', '❌ Falha');
+                    updateServerStatus('red', 'Servidor: Erro ' + response.status);
+                }
+            } catch (error) {
+                setTestStatus('test-vite', '❌ Erro');
+                updateServerStatus('red', 'Servidor: Offline');
+                addLog('error', 'Vite Test', 'Servidor Vite não responde', error.stack);
+            }
+        }
+
+        async function testMainImport() {
+            try {
+                const module = await import('/client/main.tsx');
+                setTestStatus('test-main', '✅ OK');
+                updateAppStatus('green', 'Aplicação: Carregada');
+                addLog('success', 'Import Test', 'Main.tsx importado com sucesso');
+            } catch (error) {
+                setTestStatus('test-main', '❌ Erro');
+                updateAppStatus('red', 'Aplicação: Erro');
+                addLog('error', 'Import Test', 'Falha ao importar main.tsx: ' + error.message, error.stack);
+            }
+        }
+
+        async function testReactComponents() {
+            try {
+                // Test if React is available
+                if (typeof React === 'undefined') {
+                    const react = await import('react');
+                    if (react) {
+                        setTestStatus('test-react', '✅ OK');
+                    }
+                } else {
+                    setTestStatus('test-react', '✅ OK');
+                }
+            } catch (error) {
+                setTestStatus('test-react', '❌ Erro');
+                addLog('error', 'React Test', 'React components test failed', error.stack);
+            }
+        }
+
+        async function testCSSStylesheets() {
+            const stylesheets = document.styleSheets;
+            let failed = 0;
+            
+            for (let i = 0; i < stylesheets.length; i++) {
+                try {
+                    const sheet = stylesheets[i];
+                    if (sheet.href) {
+                        // Test if stylesheet loaded properly
+                        const response = await fetch(sheet.href);
+                        if (!response.ok) failed++;
+                    }
+                } catch (error) {
+                    failed++;
+                    addLog('error', 'CSS Test', \`Stylesheet failed to load: \${error.message}\`);
+                }
+            }
+            
+            setTestStatus('test-css', failed === 0 ? '✅ OK' : \`❌ \${failed} falhas\`);
+        }
+
+        async function testAPIConnectivity() {
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    setTestStatus('test-api', '✅ OK');
+                    updateNetworkStatus('green', 'Rede: Conectada');
+                } else {
+                    setTestStatus('test-api', '⚠️ Parcial');
+                    updateNetworkStatus('yellow', 'Rede: Instável');
+                }
+            } catch (error) {
+                setTestStatus('test-api', '❌ Erro');
+                updateNetworkStatus('red', 'Rede: Offline');
+                addLog('error', 'API Test', 'API connectivity failed', error.stack);
+            }
+        }
+
+        function setTestStatus(testId, status) {
+            document.getElementById(testId).innerHTML = status;
+        }
+
+        function updateServerStatus(color, text) {
+            document.getElementById('server-status').className = \`dot \${color}\`;
+            document.getElementById('server-text').textContent = text;
+        }
+
+        function updateAppStatus(color, text) {
+            document.getElementById('app-status').className = \`dot \${color}\`;
+            document.getElementById('app-text').textContent = text;
+        }
+
+        function updateNetworkStatus(color, text) {
+            document.getElementById('network-status').className = \`dot \${color}\`;
+            document.getElementById('network-text').textContent = text;
+        }
+
+        // Auto-refresh
+        setInterval(() => {
+            if (autoRefresh) {
+                updateStats();
+            }
+        }, 2000);
+
+        // Initialize status immediately
+        updateServerStatus('yellow', 'Servidor: Verificando...');
+        updateAppStatus('yellow', 'Aplicação: Verificando...');
+        updateNetworkStatus('yellow', 'Rede: Verificando...');
+        
+        // Run initial diagnostic
+        setTimeout(() => {
+            console.log('Running initial diagnostic...');
+            runFullDiagnostic().catch(error => {
+                console.error('Initial diagnostic failed:', error);
+                updateServerStatus('red', 'Servidor: Erro na verificação');
+                updateAppStatus('red', 'Aplicação: Erro na verificação');
+                updateNetworkStatus('red', 'Rede: Erro na verificação');
+            });
+        }, 1000);
+
+        // Initial log
+        addLog('info', 'System', 'Debug system initialized successfully');
+
+        // ========== RAW DATA DEBUG SECTION ==========
+        // Monitor CellRenderer raw data mode
+        let rawDataLogs = [];
+        let rawDataMonitoring = false;
+
+        // Override console.log to capture raw data logs
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            
+            // Check if this is a CellRenderer raw mode log
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('CellRenderer Raw Mode')) {
+                const logEntry = {
+                    timestamp: new Date().toISOString(),
+                    value: args[1],
+                    type: args[3],
+                    isNull: args[5],
+                    isEmpty: args[7]
+                };
+                rawDataLogs.push(logEntry);
+                
+                // Add to main debug log
+                addLog('info', 'Raw Data', `Value: "${args[1]}" | Type: ${args[3]} | Null: ${args[5]} | Empty: ${args[7]}`, null, logEntry);
+                
+                // Update raw data display
+                updateRawDataDisplay();
+            }
+        };
+
+        function updateRawDataDisplay() {
+            const container = document.getElementById('raw-data-monitor');
+            if (!container) {
+                // Create raw data monitor section if it doesn't exist
+                const mainContent = document.querySelector('.content');
+                const rawDataSection = document.createElement('div');
+                rawDataSection.innerHTML = `
+                    <div class="stat-card" style="margin-top: 20px; background: #161b22; border: 1px solid #30363d; padding: 15px; border-radius: 6px;">
+                        <h3 style="color: #f0f6fc; margin-bottom: 10px;">🔍 Raw Data Monitor</h3>
+                        <div id="raw-data-monitor" style="max-height: 200px; overflow-y: auto;">
+                            <div style="color: #7d8590; font-size: 12px;">Clique no ícone de filtro da tabela para ativar o modo raw e ver os valores aqui...</div>
+                        </div>
+                    </div>
+                `;
+                mainContent.appendChild(rawDataSection);
+                return;
+            }
+
+            // Display last 10 raw data logs
+            const recentLogs = rawDataLogs.slice(-10).reverse();
+            container.innerHTML = recentLogs.map(log => {
+                let displayValue = log.value;
+                let bgColor = '#161b22';
+                let textColor = '#c9d1d9';
+                
+                if (log.isNull) {
+                    displayValue = 'NULL';
+                    bgColor = '#3d1515';
+                    textColor = '#ff6b6b';
+                } else if (log.isEmpty) {
+                    displayValue = '(empty string)';
+                    bgColor = '#3d2815';
+                    textColor = '#ffa94d';
+                } else if (log.value === undefined) {
+                    displayValue = 'undefined';
+                    bgColor = '#2d1a3d';
+                    textColor = '#d0a8ff';
+                }
+                
+                return `
+                    <div style="background: ${bgColor}; padding: 5px 10px; margin-bottom: 5px; border-radius: 4px; font-family: monospace; font-size: 11px;">
+                        <span style="color: ${textColor}; font-weight: bold;">${displayValue}</span>
+                        <span style="color: #7d8590; margin-left: 10px;">type: ${log.type}</span>
+                        <span style="color: #505864; float: right;">${new Date(log.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Add summary
+            const nullCount = rawDataLogs.filter(l => l.isNull).length;
+            const emptyCount = rawDataLogs.filter(l => l.isEmpty).length;
+            const totalCount = rawDataLogs.length;
+            
+            if (totalCount > 0) {
+                container.innerHTML += `
+                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #30363d; font-size: 11px; color: #7d8590;">
+                        Total: ${totalCount} | NULLs: ${nullCount} | Empty: ${emptyCount}
+                    </div>
+                `;
+            }
+        }
+
+        // Add button to clear raw data logs
+        const controlsDiv = document.querySelector('.controls');
+        if (controlsDiv) {
+            const clearRawDataBtn = document.createElement('button');
+            clearRawDataBtn.className = 'secondary';
+            clearRawDataBtn.textContent = '🔍 Limpar Raw Data';
+            clearRawDataBtn.onclick = function() {
+                rawDataLogs = [];
+                updateRawDataDisplay();
+                addLog('info', 'Raw Data', 'Raw data logs cleared');
+            };
+            controlsDiv.appendChild(clearRawDataBtn);
+        }
+
+        // Initial display
+        updateRawDataDisplay();
+    </script>
+</body>
+</html>

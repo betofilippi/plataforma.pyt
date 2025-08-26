@@ -1,0 +1,56 @@
+# Ignorar para Claude Code - otimização de performance
+
+# Dependências e lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+node_modules/
+
+# Build e distribuição
+dist/
+build/
+.next/
+out/
+
+# Controle de versão
+.git/
+
+# Arquivos de backup e temporários
+archive/
+*.backup.*
+*.broken.*
+*.RECOVERED.*
+*.original-backup.*
+*.no-logs.*
+*.bak
+*.tmp
+*.temp
+*.old
+
+# Arquivos de teste temporários
+test.html
+*test*.cjs
+*cleanup*.cjs
+*analyze*.js
+*check*.js
+
+# Logs
+*.log
+logs/
+
+# Cache
+cache/
+.cache/
+.vite/
+
+# IDEs
+.cursor/
+.vscode/
+.idea/
+
+# Arquivos grandes específicos do projeto
+client/pages/windows/TableEditorCanvas.backup.tsx
+client/pages/windows/TableEditorCanvas.broken.tsx
+client/pages/windows/TableEditorCanvas.original-backup.tsx
+client/pages/windows/TableEditorCanvas.no-logs.tsx
+client/pages/windows/TableEditorCanvas.RECOVERED.tsx

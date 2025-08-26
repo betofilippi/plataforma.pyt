@@ -1,0 +1,1752 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* WhatsApp slide up animation */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+::-webkit-scrollbar-corner {
+  background: #1f2937;
+}
+
+/* Table scroll container specific styles */
+.table-scroll-container {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* Transição suave para aparecer/desaparecer */
+  transition: all 0.2s ease;
+}
+
+/* Scrollbar vertical - oculto por padrão */
+.table-scroll-container::-webkit-scrollbar {
+  width: 0;
+  height: 12px; /* mantém horizontal visível */
+  transition: width 0.2s ease;
+}
+
+/* Mostrar scrollbar vertical apenas no hover */
+.table-scroll-container:hover::-webkit-scrollbar {
+  width: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 6px;
+  margin: 0;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.table-scroll-container::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Estilo para scrollbar horizontal do wrapper */
+.table-horizontal-scroll-wrapper {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Scrollbar horizontal - oculto por padrão */
+.table-horizontal-scroll-wrapper::-webkit-scrollbar {
+  height: 0;
+  width: 8px;
+  transition: height 0.2s ease;
+}
+
+/* Mostrar scrollbar horizontal apenas no hover */
+.table-horizontal-scroll-wrapper:hover::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-horizontal-scroll-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 6px;
+}
+
+.table-horizontal-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.table-horizontal-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.table-horizontal-scroll-wrapper::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Backdrop sólido para o header da tabela estilo Excel */
+/* Comentado - pode estar interferindo com alinhamento
+.table-header-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #e2e2e2;
+  z-index: -1;
+}
+*/
+
+.table-scroll-container table {
+  margin: 0;
+  padding: 0;
+  border-collapse: collapse;
+}
+
+.table-scroll-container table td,
+.table-scroll-container table th {
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* Window content scroll behavior */
+.window-content {
+  /* Enable both vertical and horizontal scroll */
+  overflow: auto;
+  /* Prevent scroll from bubbling to parent */
+  overscroll-behavior: contain;
+}
+
+/* Ensure internal scrollable areas work independently */
+.window-content * {
+  /* Allow nested scrollable areas */
+  overscroll-behavior: auto;
+}
+
+/* For elements with explicit overflow */
+.window-content [class*="overflow-auto"],
+.window-content [class*="overflow-scroll"],
+.window-content [class*="overflow-x-auto"],
+.window-content [class*="overflow-y-auto"],
+.window-content [class*="overflow-x-scroll"],
+.window-content [class*="overflow-y-scroll"] {
+  /* Contain scroll within these elements */
+  overscroll-behavior: contain;
+}
+
+/* Pre and code blocks should scroll horizontally */
+.window-content pre,
+.window-content code {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-width: 100%;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+    /* Sidebar variables */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    /* Sidebar variables for dark mode */
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  
+  * {
+    border-color: hsl(var(--border));
+  }
+  
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Design System Tokens */
+:root {
+  --bg: #0c1220;
+  --glass: rgba(255,255,255,.06);
+  --glass-strong: rgba(255,255,255,.10);
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #22d3ee;       /* ciano */
+  --accent-2: #a78bfa;     /* violeta */
+}
+
+/* Card principal da tabela (mais "vidro" e borda) */
+.table-card {
+  @apply rounded-2xl bg-white/5 backdrop-blur-md ring-1 ring-white/10;
+  /* sombra suave sem "neon" */
+  box-shadow: 0 20px 40px -28px rgba(0,0,0,.6);
+}
+
+/* Cabeçalho da grid (contraste + linha de luz) */
+.th-glass {
+  @apply sticky top-0 z-10 backdrop-blur
+         text-sm uppercase tracking-wide font-medium text-white
+         border-b border-white/10;
+  background: rgba(255,255,255,0.04);
+  /* filete ciano perolado na base do header */
+  box-shadow: inset 0 -1px 0 rgba(34,211,238,.18);
+}
+.th-glass:first-child { @apply rounded-tl-xl; }
+.th-glass:last-child  { @apply rounded-tr-xl; }
+
+/* Linhas: hover/focus acessível */
+.tr-row { 
+  @apply text-slate-200 border-b border-white/5;
+  transition: background-color 0.2s ease;
+}
+.tr-row:hover { 
+  background-color: rgba(34, 211, 238, 0.03);
+}
+.tr-row:focus-within { 
+  background-color: rgba(34, 211, 238, 0.05);
+}
+.td-cell     { @apply text-slate-200 border-b border-white/5; }
+
+/* Botões coesos */
+.btn-primary {
+  @apply inline-flex items-center gap-2 rounded-2xl
+  bg-gradient-to-r from-cyan-400 to-violet-500
+  px-3.5 py-2 font-medium text-slate-900
+  shadow-[0_8px_24px_-8px_rgba(34,211,238,.35)]
+  hover:opacity-95 focus-visible:outline-none
+  focus-visible:ring-2 focus-visible:ring-cyan-400/50 disabled:opacity-60;
+}
+.btn-ghost {
+  @apply inline-flex items-center gap-2 rounded-xl
+  bg-white/5 px-3 py-1.5 text-slate-200 ring-1 ring-white/10
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40;
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Chips/abas: ativa vs. inativa */
+.chip {
+  @apply inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-slate-300 ring-1 ring-white/10;
+  background-color: rgba(255, 255, 255, 0.04);
+  transition: background-color 0.2s ease;
+}
+.chip:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.chip--on   { @apply text-cyan-200 bg-cyan-400/15 ring-cyan-400/30 shadow-[inset_0_0_0_1px_rgba(34,211,238,.25)]; }
+/* contador dentro do chip */
+.chip-count { @apply ml-1 rounded-full px-1.5 py-0.5 text-[10px] bg-white/10 text-slate-300; }
+
+/* Toolbar (grupada + divisores sutis) */
+.toolbar {
+  @apply rounded-2xl backdrop-blur ring-1 ring-white/10 px-2 py-2;
+  background-color: rgba(255, 255, 255, 0.04);
+  z-index: 9999;
+  position: sticky;
+  top: 0;
+}
+.toolbar .group { @apply inline-flex items-center gap-1 px-2; }
+.toolbar .sep   { @apply h-5 w-px bg-white/10 mx-1; }
+
+/* Scrollbar discreto */
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,.08); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.14); }
+
+/* Header estilo toolbar */
+.header-toolbar-style {
+  background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.04)) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: inset 0 -1px 0 rgba(34,211,238,.18) !important;
+}
+
+/* 1) Tokens mínimos */
+:root {
+  --bg: #0c1220;
+  --glass: rgba(255,255,255,.06);
+  --glass-strong: rgba(255,255,255,.10);
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #22d3ee;       /* ciano */
+  --accent-2: #a78bfa;     /* violeta */
+}
+
+/* 2) Card principal da tabela (mais "vidro" e borda) */
+.table-card {
+  @apply rounded-2xl bg-white/5 backdrop-blur-md ring-1 ring-white/10;
+  /* sombra suave sem "neon" */
+  box-shadow: 0 20px 40px -28px rgba(0,0,0,.6);
+}
+
+/* 3) Cabeçalho da grid (contraste + linha de luz) - REMOVED DUPLICATE */
+.th-glass:first-child { @apply rounded-tl-xl; }
+.th-glass:last-child  { @apply rounded-tr-xl; }
+
+/* 4) Linhas: hover/focus acessível - REMOVED DUPLICATE */
+
+/* 5) Botões coesos */
+.btn-primary {
+  @apply inline-flex items-center gap-2 rounded-2xl
+  bg-gradient-to-r from-cyan-400 to-violet-500
+  px-3.5 py-2 font-medium text-slate-900
+  shadow-[0_8px_24px_-8px_rgba(34,211,238,.35)]
+  hover:opacity-95 focus-visible:outline-none
+  focus-visible:ring-2 focus-visible:ring-cyan-400/50 disabled:opacity-60;
+}
+.btn-ghost {
+  @apply inline-flex items-center gap-2 rounded-xl
+  bg-white/5 px-3 py-1.5 text-slate-200 ring-1 ring-white/10
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40;
+  transition: all 0.2s ease;
+}
+.btn-ghost:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 6) Chips/abas: ativa vs. inativa - REMOVED DUPLICATE */
+.chip--on   { @apply text-cyan-200 bg-cyan-400/15 ring-cyan-400/30 shadow-[inset_0_0_0_1px_rgba(34,211,238,.25)]; }
+/* contador dentro do chip */
+.chip-count { @apply ml-1 rounded-full px-1.5 py-0.5 text-[10px] bg-white/10 text-slate-300; }
+
+/* 7) Toolbar (grupada + divisores sutis) - REMOVED DUPLICATE */
+.toolbar .group { @apply inline-flex items-center gap-1 px-2; }
+.toolbar .sep   { @apply h-5 w-px bg-white/10 mx-1; }
+
+/* 8) Scrollbar discreto */
+::-webkit-scrollbar { height: 10px; width: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,.08); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.14); }
+
+/* Prevent text selection in database tables during drag */
+.database-excel-table {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Allow text selection only in inputs when editing */
+.database-excel-table input,
+.database-excel-table textarea {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Prevent text selection on all table cells */
+.database-excel-table td,
+.database-excel-table th {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  cursor: cell;
+}
+
+/* Selection styles */
+.database-excel-table td.selecting {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+@layer base {
+  html {
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* RevoGrid Dark Theme Styles - Complete Configuration */
+.revo-grid-container {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+revo-grid {
+  /* Main Grid */
+  --revogrid-background: transparent !important;
+  --revogrid-color: #e5e7eb !important;
+  --revogrid-border-color: rgba(255, 255, 255, 0.15) !important;
+  
+  /* Headers */
+  --revogrid-header-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%) !important;
+  --revogrid-header-color: #d8b4fe !important;
+  --revogrid-header-border: rgba(168, 85, 247, 0.3) !important;
+  --revogrid-header-font-weight: 600 !important;
+  
+  /* Column Groups */
+  --revogrid-group-bg: rgba(168, 85, 247, 0.1) !important;
+  --revogrid-group-color: #a855f7 !important;
+  --revogrid-group-border: rgba(168, 85, 247, 0.2) !important;
+  
+  /* Cells */
+  --revogrid-cell-bg: transparent !important;
+  --revogrid-cell-color: #e5e7eb !important;
+  --revogrid-cell-border: rgba(255, 255, 255, 0.1) !important;
+  
+  /* Row Headers */
+  --revogrid-row-header-bg: rgba(0, 0, 0, 0.5) !important;
+  --revogrid-row-header-color: #9ca3af !important;
+  --revogrid-row-header-border: rgba(255, 255, 255, 0.1) !important;
+  
+  /* Interactions */
+  --revogrid-row-hover: rgba(168, 85, 247, 0.1) !important;
+  --revogrid-row-even: rgba(255, 255, 255, 0.02) !important;
+  --revogrid-row-odd: transparent !important;
+  --revogrid-cell-focus: rgba(168, 85, 247, 0.3) !important;
+  --revogrid-cell-edit: rgba(168, 85, 247, 0.2) !important;
+  --revogrid-cell-selected: rgba(168, 85, 247, 0.15) !important;
+  
+  /* Selection */
+  --revogrid-selection-bg: rgba(168, 85, 247, 0.2) !important;
+  --revogrid-selection-border: #a855f7 !important;
+  --revogrid-selection-border-width: 2px !important;
+  
+  /* Scrollbars */
+  --revogrid-scrollbar-bg: rgba(0, 0, 0, 0.3) !important;
+  --revogrid-scrollbar-thumb: rgba(168, 85, 247, 0.5) !important;
+  --revogrid-scrollbar-thumb-hover: rgba(168, 85, 247, 0.7) !important;
+  
+  /* Filter */
+  --revogrid-filter-bg: rgba(0, 0, 0, 0.8) !important;
+  --revogrid-filter-color: #e5e7eb !important;
+  --revogrid-filter-border: rgba(168, 85, 247, 0.3) !important;
+  
+  /* Resize Handle */
+  --revogrid-resize-handle: rgba(168, 85, 247, 0.5) !important;
+  --revogrid-resize-handle-hover: #a855f7 !important;
+  
+  /* Font Settings */
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif !important;
+  font-size: 13px !important;
+}
+
+/* RevoGrid Material Theme Overrides */
+revo-grid[theme="material"] {
+  --revogrid-header-height: 48px !important;
+  --revogrid-row-height: 36px !important;
+}
+
+/* Column Headers Styling */
+revo-grid .rgHeaderCell {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%) !important;
+  color: #d8b4fe !important;
+  font-weight: 600 !important;
+  border-right: 1px solid rgba(168, 85, 247, 0.2) !important;
+  border-bottom: 2px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Column Group Headers */
+revo-grid .rgGroupCell {
+  background: rgba(168, 85, 247, 0.1) !important;
+  color: #a855f7 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
+  border-bottom: 2px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Row Headers */
+revo-grid .rgRowHeader {
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: #9ca3af !important;
+  font-weight: 500 !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Grid Lines */
+revo-grid .rgCell {
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Required Cell Indicator */
+revo-grid .required-cell {
+  position: relative;
+}
+
+revo-grid .required-cell::before {
+  content: '*';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  color: #fbbf24;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+/* Pinned Columns */
+revo-grid .rgCell[pin="colPinStart"] {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-right: 2px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Custom scrollbar for RevoGrid */
+revo-grid ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+revo-grid ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+revo-grid ::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.5);
+  border-radius: 5px;
+}
+
+revo-grid ::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.7);
+}
+
+revo-grid ::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Force color display for color picker squares */
+.color-square {
+  background-color: var(--color-value) !important;
+  background: var(--color-value) !important;
+}
+
+/* Primeira coluna apenas com sticky */
+.first-column-narrow {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 20 !important;
+}
+
+/* Header da primeira coluna com freeze */
+thead th.first-column-narrow {
+  z-index: 30 !important;
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
+.color-square[data-color="#ffffff"] {
+  background-color: #ffffff !important;
+}
+.color-square[data-color="#000000"] {
+  background-color: #000000 !important;
+}
+.color-square[data-color="#ff0000"] {
+  background-color: #ff0000 !important;
+}
+.color-square[data-color="#00ff00"] {
+  background-color: #00ff00 !important;
+}
+.color-square[data-color="#0000ff"] {
+  background-color: #0000ff !important;
+}
+.color-square[data-color="#ffff00"] {
+  background-color: #ffff00 !important;
+}
+.color-square[data-color="#ff00ff"] {
+  background-color: #ff00ff !important;
+}
+.color-square[data-color="#00ffff"] {
+  background-color: #00ffff !important;
+}
+
+/* Additional colors for full palette */
+.color-square[data-color="#f0f0f0"] {
+  background-color: #f0f0f0 !important;
+}
+.color-square[data-color="#808080"] {
+  background-color: #808080 !important;
+}
+.color-square[data-color="#800000"] {
+  background-color: #800000 !important;
+}
+.color-square[data-color="#008000"] {
+  background-color: #008000 !important;
+}
+.color-square[data-color="#000080"] {
+  background-color: #000080 !important;
+}
+.color-square[data-color="#808000"] {
+  background-color: #808000 !important;
+}
+.color-square[data-color="#800080"] {
+  background-color: #800080 !important;
+}
+.color-square[data-color="#008080"] {
+  background-color: #008080 !important;
+}
+
+/* Force border display with highest specificity */
+.cell-with-borders {
+  border: none !important;
+}
+
+/* Fixed cell dimensions - prevent responsive behavior */
+.spreadsheet-scroll-container table {
+  table-layout: fixed !important;
+  width: auto !important;
+}
+
+/* First column (row numbers) - highest specificity */
+.spreadsheet-scroll-container table thead th.first-column-narrow,
+.spreadsheet-scroll-container table tbody td.first-column-narrow {
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.spreadsheet-scroll-container table thead th.first-column-narrow {
+  height: 40px !important;
+}
+
+.spreadsheet-scroll-container table tbody td.first-column-narrow {
+  height: 32px !important;
+}
+
+/* Data columns (excluding first column) */
+.spreadsheet-scroll-container table thead th:not(.first-column-narrow),
+.spreadsheet-scroll-container table tbody td:not(.first-column-narrow) {
+  width: 205px !important;
+  min-width: 205px !important;
+  max-width: 205px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.spreadsheet-scroll-container table thead th:not(.first-column-narrow) {
+  height: 40px !important;
+}
+
+.spreadsheet-scroll-container table tbody td:not(.first-column-narrow) {
+  height: 32px !important;
+}
+
+.cell-border-top {
+  border-top: var(--border-top) !important;
+}
+.cell-border-bottom {
+  border-bottom: var(--border-bottom) !important;
+}
+.cell-border-left {
+  border-left: var(--border-left) !important;
+}
+.cell-border-right {
+  border-right: var(--border-right) !important;
+}
+
+/* Excel-inspired professional table styling */
+.modern-table {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* Excel-style hover effects */
+tbody tr:hover {
+  background: rgba(219, 234, 254, 0.5);
+}
+
+/* Excel-style focus states */
+td:focus-within:not([data-table-cell]) {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #3b82f6;
+  z-index: 10;
+  background: #dbeafe;
+}
+
+/* Force transparency only for divs and spans inside cells - not the cells themselves */
+td[data-table-cell] div,
+td[data-table-cell] span {
+  background: transparent !important;
+  background-color: transparent !important;
+  /* Preserve text color */
+  color: inherit;
+}
+
+/* Force first column to maintain its color */
+td[data-first-column="true"] {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Excel table styling */
+.database-table {
+  border-spacing: 0;
+  border-collapse: separate;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  width: 100%;
+}
+
+/* Excel-style selected cells */
+td.selected {
+  background: #c7d2fe !important;
+  border: 2px solid #4f46e5 !important;
+}
+
+/* Excel header styling com freeze */
+/* Comentado - estava interferindo com TableEditor 
+thead th {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  font-size: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+  border-bottom: 2px solid #94a3b8;
+}
+*/
+
+/* Excel row numbering */
+/* Comentado - estava interferindo com alinhamento do TableEditor
+tbody td:first-child {
+  font-weight: 600;
+  font-size: 11px;
+}
+*/
+
+@layer base {
+  /**
+   * Tailwind CSS theme
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body, #root {
+    background-color: #1f2937 !important;
+    color: white !important;
+    min-height: 100vh !important;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-color: #1f2937 !important;
+    color: white !important;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  }
+
+  .brazil-flag-gradient {
+    background: linear-gradient(45deg, #009739 0%, #ffdf00 50%, #002776 100%);
+  }
+
+  /* Excel-like Spreadsheet Styles */
+  .excel-spreadsheet {
+    font-family: "Segoe UI", "Calibri", system-ui, sans-serif;
+  }
+
+  .excel-header-cell {
+    background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+    font-weight: 600;
+    font-size: 12px;
+    color: #1e293b;
+    text-align: center;
+    user-select: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .excel-header-cell:hover {
+    background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+  }
+
+  .excel-row-header {
+    background: linear-gradient(to right, #f8fafc 0%, #f1f5f9 100%);
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid #cbd5e1;
+    font-weight: 600;
+    font-size: 11px;
+    color: #475569;
+    text-align: center;
+    user-select: none;
+    cursor: pointer;
+    min-width: 48px;
+  }
+
+  .excel-row-header:hover {
+    background: linear-gradient(to right, #e2e8f0 0%, #cbd5e1 100%);
+  }
+
+  /* Tabela da planilha com bordas separadas para evitar vazamento */
+  .excel-spreadsheet table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .excel-container table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .excel-cell {
+    background: white;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 13px;
+    color: #1e293b;
+    cursor: cell;
+    transition: all 0.1s ease;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* Otimização para bordas de 1px */
+  .excel-cell[style*="1px solid"] {
+    image-rendering: crisp-edges;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+
+  .excel-cell:hover {
+    background: #f8fafc;
+  }
+
+  .excel-cell.selected {
+    background: #dbeafe !important;
+    border: 2px solid #3b82f6 !important;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+  }
+
+  .excel-cell.zebra {
+    background: #fafbfc;
+  }
+
+  .excel-resize-handle {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 6px;
+    height: 6px;
+    background: #3b82f6;
+    border: 1px solid white;
+    cursor: se-resize;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .excel-container {
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: auto;
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    position: relative;
+    max-height: calc(100vh - 200px);
+  }
+
+  /* Container de scroll para tabela com freeze */
+  .spreadsheet-scroll-container {
+    overflow: auto;
+    max-height: calc(100vh - 200px);
+    position: relative;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+    scroll-behavior: smooth;
+  }
+
+  /* Apenas configuração básica da tabela */
+  .spreadsheet-scroll-container table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* Prevenção de sobreposição durante scroll */
+  .spreadsheet-scroll-container thead th:not(.first-column-narrow) {
+    background-clip: padding-box;
+  }
+
+  .spreadsheet-scroll-container tbody td:not(.first-column-narrow) {
+    background-clip: padding-box;
+  }
+
+  /* Excel Worksheet Tabs (Classic Style) */
+  .excel-tab-bar {
+    background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+    border-bottom: 1px solid #cbd5e1;
+    border-top: 1px solid #cbd5e1;
+    padding: 0;
+    height: 32px;
+    display: flex;
+    align-items: stretch;
+    user-select: none;
+    font-family: "Segoe UI", "Calibri", system-ui, sans-serif;
+  }
+
+  .excel-tab {
+    position: relative;
+    background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+    border-right: 1px solid #94a3b8;
+    border-left: 1px solid #f1f5f9;
+    border-top: 1px solid #cbd5e1;
+    padding: 0 14px;
+    height: calc(100% - 1px);
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 60px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+    border-radius: 4px 4px 0 0;
+    transform: perspective(100px) rotateX(5deg);
+    transform-origin: bottom center;
+  }
+
+  .excel-tab:hover {
+    background: linear-gradient(to bottom, #f1f5f9 0%, #e2e8f0 100%);
+    color: #1e293b;
+  }
+
+  .excel-tab.active {
+    background: white;
+    border-top: 1px solid #cbd5e1;
+    border-left: 1px solid #cbd5e1;
+    border-right: 1px solid #cbd5e1;
+    border-bottom: 1px solid white;
+    color: #1e293b;
+    font-weight: 600;
+    z-index: 10;
+    margin-top: 0;
+    height: 100%;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+    transform: perspective(100px) rotateX(0deg);
+    border-radius: 4px 4px 0 0;
+  }
+
+  .excel-tab.active::before {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: -1px;
+    right: -1px;
+    height: 2px;
+    background: white;
+    z-index: 11;
+  }
+
+  .excel-tab-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-left: 1px solid #cbd5e1;
+    background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+  }
+
+  .excel-tab-add-btn {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #94a3b8;
+    background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 2px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .excel-tab-add-btn:hover {
+    background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+    border-color: #64748b;
+    color: #1e293b;
+  }
+
+  .excel-tab-navigation {
+    display: flex;
+    align-items: center;
+    border-right: 1px solid #cbd5e1;
+    background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+    padding: 0 4px;
+  }
+
+  .excel-tab-nav-btn {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #94a3b8;
+    background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+    color: #475569;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin: 0 1px;
+  }
+
+  .excel-tab-nav-btn:hover {
+    background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+    border-color: #64748b;
+  }
+
+  .excel-tab-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* === ESTILOS PARA SELEÇÃO M��LTIPLA E DRAG === */
+
+  /* Estilos para seleção múltipla de c��lulas */
+  .excel-cell.selected {
+    background-color: #dbeafe !important;
+    border: 2px solid #2563eb !important;
+    position: relative;
+    z-index: 3;
+  }
+
+  .excel-cell.multi-selected {
+    background-color: #eff6ff !important;
+    border: 1px solid #3b82f6 !important;
+    z-index: 2;
+  }
+
+  .excel-cell.drag-selecting {
+    background-color: #bfdbfe !important;
+    border: 1px dashed #2563eb !important;
+    z-index: 1;
+  }
+
+  /* Headers selecionados (colunas e linhas) */
+  .excel-header-cell.selected,
+  .excel-row-header.selected {
+    background: linear-gradient(to bottom, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    font-weight: 600;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2);
+  }
+
+  /* Hover states para headers */
+  .excel-header-cell:hover,
+  .excel-row-header:hover {
+    background: linear-gradient(to bottom, #f1f5f9 0%, #e2e8f0 100%);
+    cursor: pointer;
+    transform: scale(1.02);
+  }
+
+  /* Prevenir seleção de texto durante drag */
+  .excel-cell {
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  /* Resize handle para células selecionadas */
+  .excel-resize-handle {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    background: #1e40af;
+    cursor: se-resize;
+    z-index: 10;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .excel-resize-handle:hover {
+    background: #1d4ed8;
+    transform: scale(1.2);
+  }
+
+  /* Indicador visual para múltiplas células selecionadas */
+  .excel-cell.selected::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid #2563eb;
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 2px;
+  }
+
+  /* Container durante drag */
+  .excel-container.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  /* Animações suaves para transições */
+  .excel-cell {
+    transition: all 0.1s ease;
+  }
+
+  .excel-header-cell,
+  .excel-row-header {
+    transition: all 0.2s ease;
+  }
+
+  /* Indicador de range durante drag */
+  .excel-cell.in-drag-range {
+    background-color: rgba(37, 99, 235, 0.1) !important;
+    border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  }
+
+  /* Estilo especial para primeira célula do range */
+  .excel-cell.range-start {
+    border-top-left-radius: 4px;
+  }
+
+  /* Estilo especial para última célula do range */
+  .excel-cell.range-end {
+    border-bottom-right-radius: 4px;
+  }
+
+  /* Tooltip para seleção múltipla */
+  .selection-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  /* CORREÇÃO RADICAL PARA POPUPS PRETOS */
+  [data-radix-popper-content-wrapper] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [data-radix-dialog-overlay] {
+    background: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  [data-radix-dialog-content] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [data-radix-dropdown-menu-content] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [data-radix-popover-content] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [data-radix-tooltip-content] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [data-radix-select-content] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Forçar todas as divs de portal do Radix */
+  [data-radix-portal] > div {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+
+  /* Forçar overlay específico */
+  [data-radix-portal] [data-radix-dialog-overlay] {
+    background: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* DESATIVAR TODOS OS TOOLTIPS PARA ELIMINAR POPUP PRETO */
+  [data-radix-tooltip-content],
+  [role="tooltip"],
+  .tooltip,
+  [data-tooltip] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  [data-radix-tooltip-trigger] {
+    pointer-events: auto !important;
+  }
+
+  /* DESATIVAR TODOS OS OVERLAYS PRETOS */
+  [data-radix-portal] *,
+  [data-radix-popper-content-wrapper] *,
+  [data-state="open"] * {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+
+  /* FORÇAR CORES EM TODOS OS ELEMENTOS RADIX */
+  [role="tooltip"] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  [role="dialog"] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [role="menu"] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  [role="listbox"] {
+    background: white !important;
+    color: #1f2937 !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* FORÇAR TODOS OS OVERLAYS */
+  [data-state="open"][data-side] {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+
+  /* ELIMINAR COMPLETAMENTE QUALQUER POPUP PRETO */
+  * {
+    --radix-tooltip-content-background: white !important;
+    --radix-popover-content-background: white !important;
+    --radix-dropdown-menu-content-background: white !important;
+  }
+
+  /* FORÇA BRUTA PARA ELIMINAR POPUPS PRETOS */
+  div[style*="black"],
+  div[style*="rgba(0, 0, 0"],
+  div[style*="rgb(0, 0, 0"] {
+    background: white !important;
+    color: #1f2937 !important;
+  }
+
+  /* FORÇA BRUTA MÁXIMA - QUALQUER COISA PRETA VIRA BRANCA */
+  *[style*="background: black"],
+  *[style*="background-color: black"],
+  *[style*="background: rgb(0"],
+  *[style*="background-color: rgb(0"],
+  *[style*="background: rgba(0, 0, 0"] {
+    background: white !important;
+    background-color: white !important;
+    color: #1f2937 !important;
+  }
+
+  /* === TYPED COLUMNS SYSTEM STYLES === */
+
+  /* Column header styled with type indicators */
+  .column-header-typed {
+    @apply bg-gradient-to-b from-gray-50 to-gray-100 border-r border-b border-gray-300;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .column-header-typed:hover {
+    @apply bg-gradient-to-b from-gray-100 to-gray-200;
+  }
+
+  .column-header-typed.pinned {
+    @apply bg-gradient-to-b from-blue-50 to-blue-100 border-blue-300;
+    position: sticky;
+    left: 0;
+    z-index: 15;
+  }
+
+  .column-header-typed.locked {
+    @apply bg-gradient-to-b from-red-50 to-red-100 border-red-300;
+  }
+
+  .column-header-typed .resize-handle {
+    @apply absolute right-0 top-0 bottom-0 w-1 cursor-col-resize opacity-0 hover:opacity-100;
+    background: linear-gradient(to bottom, transparent, #3b82f6, transparent);
+    transition: opacity 0.2s ease;
+  }
+
+  .column-header-typed:hover .resize-handle {
+    opacity: 0.7;
+  }
+
+  /* Cell validation styles */
+  .cell-validation-error {
+    @apply bg-red-50 border-red-300;
+    position: relative;
+  }
+
+  .cell-validation-warning {
+    @apply bg-yellow-50 border-yellow-300;
+    position: relative;
+  }
+
+  .cell-validation-success {
+    @apply bg-green-50 border-green-300;
+    position: relative;
+  }
+
+  /* Pinned column styles */
+  .cell-pinned {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: rgba(219, 234, 254, 0.8) !important;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Locked cell styles */
+  .cell-locked {
+    @apply bg-gray-100 text-gray-600;
+    cursor: not-allowed;
+  }
+
+  /* Integration mapping indicators */
+  .integration-indicator {
+    @apply absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white;
+    animation: pulse 2s infinite;
+  }
+
+  /* Required field indicator */
+  .required-field::before {
+    content: "*";
+    @apply absolute top-0 left-0 text-red-500 text-xs font-bold;
+  }
+
+  /* Data type badges in headers */
+  .data-type-badge {
+    @apply inline-flex items-center px-1 py-0.5 rounded text-xs font-medium;
+  }
+
+  .data-type-text {
+    @apply bg-gray-100 text-gray-800;
+  }
+  .data-type-number {
+    @apply bg-blue-100 text-blue-800;
+  }
+  .data-type-currency {
+    @apply bg-green-100 text-green-800;
+  }
+  .data-type-date {
+    @apply bg-purple-100 text-purple-800;
+  }
+  .data-type-file {
+    @apply bg-orange-100 text-orange-800;
+  }
+  .data-type-image {
+    @apply bg-pink-100 text-pink-800;
+  }
+  .data-type-formula {
+    @apply bg-red-100 text-red-800;
+  }
+  .data-type-lookup {
+    @apply bg-indigo-100 text-indigo-800;
+  }
+  .data-type-reference {
+    @apply bg-teal-100 text-teal-800;
+  }
+
+  /* Column configuration dropdown animations */
+  .column-config-dropdown {
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Integration mapper dialog styles */
+  .integration-mapper {
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .integration-mapping-card {
+    @apply border rounded-lg p-4 transition-all hover:shadow-md;
+  }
+
+  .integration-mapping-card.active {
+    @apply border-green-300 bg-green-50;
+  }
+
+  .integration-mapping-card.inactive {
+    @apply border-gray-300 bg-gray-50;
+  }
+
+  /* Cell validation indicators */
+  .validation-indicator {
+    @apply absolute top-0 right-0 w-4 h-4;
+    transform: translate(50%, -50%);
+  }
+
+  .validation-indicator.error {
+    @apply text-red-500;
+  }
+
+  .validation-indicator.warning {
+    @apply text-yellow-500;
+  }
+
+  .validation-indicator.success {
+    @apply text-green-500;
+  }
+}
+
+/* Custom scrollable table styles for horizontal scroll */
+.scrollable-table-container {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  max-width: 100% !important;
+}
+
+.scrollable-table {
+  table-layout: auto !important;
+  width: max-content !important;
+  min-width: 100% !important;
+}
+
+.scrollable-table th,
+.scrollable-table td {
+  min-width: 150px !important;
+  white-space: nowrap !important;
+}
+
+/* Force horizontal scroll when content overflows */
+.force-horizontal-scroll {
+  overflow-x: scroll !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.force-horizontal-scroll table {
+  min-width: max-content !important;
+  width: auto !important;
+}
+
+/* Enhanced scrollbar styling for table containers */
+.scrollable-table-container::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.scrollable-table-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.scrollable-table-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scrollable-table-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.6);
+  background-clip: content-box;
+}
+
+.scrollable-table-container::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* FORÇA BARRA DE SCROLL HORIZONTAL SEMPRE VISÍVEL */
+.force-scrollbar {
+  overflow-x: scroll !important;
+  scrollbar-width: auto !important;
+  -ms-overflow-style: scrollbar !important;
+}
+
+.force-scrollbar::-webkit-scrollbar {
+  height: 16px !important;
+  width: 16px !important;
+  background: #f1f1f1 !important;
+  border-radius: 0 !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 0 !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-thumb {
+  background: #888 !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555 !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-corner {
+  background: #f1f1f1 !important;
+}
+
+/* Custom scrollbar styles - MAIS VISÍVEL PARA SUPABASE KIT */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 6px;
+  border: 1px solid #374151;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #6b7280, #4b5563);
+  border-radius: 6px;
+  border: 1px solid #374151;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9ca3af, #6b7280);
+}
+
+/* Forçar scrollbar sempre visível no Supabase Kit */
+.supabase-kit-scroll {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #6b7280 #1f2937 !important;
+}

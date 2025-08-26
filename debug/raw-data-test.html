@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Data Debug - Simples</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #1a1a1a; 
+            color: #e0e0e0; 
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4ade80;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .status-bar {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .dot.green { background: #4ade80; }
+        .dot.yellow { background: #fbbf24; }
+        .dot.red { background: #ef4444; }
+        
+        .section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #60a5fa;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .raw-data-item {
+            background: #1a1a1a;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #444;
+        }
+        .raw-data-item.null {
+            border-left-color: #ef4444;
+            background: #2a1515;
+        }
+        .raw-data-item.empty {
+            border-left-color: #fbbf24;
+            background: #2a2415;
+        }
+        .raw-data-item.normal {
+            border-left-color: #4ade80;
+        }
+        
+        .value-display {
+            font-weight: bold;
+        }
+        .null-value { color: #ef4444; }
+        .empty-value { color: #fbbf24; }
+        .normal-value { color: #4ade80; }
+        
+        .meta-info {
+            color: #888;
+            font-size: 11px;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button.secondary {
+            background: #6b7280;
+        }
+        
+        .test-status {
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .test-status.success {
+            border-left: 3px solid #4ade80;
+        }
+        .test-status.error {
+            border-left: 3px solid #ef4444;
+        }
+        
+        #log-output {
+            background: #0d0d0d;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Raw Data Debug Monitor</h1>
+        
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="dot" id="app-status"></div>
+                <span id="app-text">App: Verificando...</span>
+            </div>
+            <div class="status-item">
+                <div class="dot" id="capture-status"></div>
+                <span id="capture-text">Captura: Inativa</span>
+            </div>
+            <div class="status-item">
+                <span id="counter">Valores capturados: 0</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="testConnection()">🔌 Testar Conexão</button>
+            <button onclick="clearCaptures()" class="secondary">🗑️ Limpar Capturas</button>
+            <button onclick="simulateData()">🧪 Simular Dados</button>
+        </div>
+        
+        <div class="section">
+            <h2>Status dos Testes</h2>
+            <div id="test-results"></div>
+        </div>
+        
+        <div class="section">
+            <h2>Valores Capturados do CellRenderer</h2>
+            <div id="captured-values">
+                <div style="color: #888; padding: 10px;">
+                    Aguardando valores... Abra o editor de tabelas e ative o modo raw (ícone de filtro verde).
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Console Output</h2>
+            <div id="log-output"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Estado global
+        let capturedValues = [];
+        let isCapturing = false;
+        
+        // Elementos DOM
+        const appStatus = document.getElementById('app-status');
+        const appText = document.getElementById('app-text');
+        const captureStatus = document.getElementById('capture-status');
+        const captureText = document.getElementById('capture-text');
+        const counter = document.getElementById('counter');
+        const capturedValuesDiv = document.getElementById('captured-values');
+        const testResults = document.getElementById('test-results');
+        const logOutput = document.getElementById('log-output');
+        
+        // Função para adicionar log
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logOutput.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        // Override console.log para capturar TODOS os logs importantes
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            
+            // CAPTURAR LOGS COM 🔴 - PROBLEMAS DE NULL/EMPTY
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('🔴')) {
+                addLog('🔴 IMPORTANTE: ' + args.join(' '), 'error');
+                
+                // Se for sobre NULL/EMPTY, adicionar aos valores capturados
+                if (args[0].includes('FOUND NULL/EMPTY')) {
+                    const info = args.join(' ');
+                    capturedValues.push({
+                        timestamp: new Date().toISOString(),
+                        value: 'PROBLEMA DETECTADO',
+                        type: 'debug',
+                        isNull: info.includes('null'),
+                        isEmpty: info.includes('empty')
+                    });
+                    updateCapturedValuesDisplay();
+                }
+            }
+            
+            // Capturar logs do CellRenderer
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('CellRenderer Raw Mode')) {
+                isCapturing = true;
+                captureStatus.className = 'dot green';
+                captureText.textContent = 'Captura: Ativa';
+                
+                const capture = {
+                    timestamp: new Date().toISOString(),
+                    value: args[1],
+                    type: args[3],
+                    isNull: args[5],
+                    isEmpty: args[7]
+                };
+                
+                capturedValues.push(capture);
+                updateCapturedValuesDisplay();
+                
+                addLog(`Capturado: value="${capture.value}", null=${capture.isNull}, empty=${capture.isEmpty}`, 'success');
+            }
+        };
+        
+        // Atualizar display de valores capturados
+        function updateCapturedValuesDisplay() {
+            counter.textContent = `Valores capturados: ${capturedValues.length}`;
+            
+            if (capturedValues.length === 0) {
+                capturedValuesDiv.innerHTML = '<div style="color: #888; padding: 10px;">Nenhum valor capturado ainda...</div>';
+                return;
+            }
+            
+            // Mostrar últimos 20 valores
+            const recentValues = capturedValues.slice(-20).reverse();
+            
+            capturedValuesDiv.innerHTML = recentValues.map(item => {
+                let className = 'raw-data-item';
+                let valueClass = 'normal-value';
+                let displayValue = item.value;
+                
+                if (item.isNull) {
+                    className += ' null';
+                    valueClass = 'null-value';
+                    displayValue = 'NULL';
+                } else if (item.isEmpty) {
+                    className += ' empty';
+                    valueClass = 'empty-value';
+                    displayValue = '(empty string)';
+                } else {
+                    className += ' normal';
+                    displayValue = `"${item.value}"`;
+                }
+                
+                return `
+                    <div class="${className}">
+                        <div>
+                            <span class="value-display ${valueClass}">${displayValue}</span>
+                            <span class="meta-info"> | type: ${item.type}</span>
+                        </div>
+                        <span class="meta-info">${new Date(item.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            // Adicionar estatísticas
+            const nullCount = capturedValues.filter(v => v.isNull).length;
+            const emptyCount = capturedValues.filter(v => v.isEmpty).length;
+            const normalCount = capturedValues.length - nullCount - emptyCount;
+            
+            capturedValuesDiv.innerHTML += `
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444; color: #888; font-size: 12px;">
+                    <strong>Estatísticas:</strong> 
+                    Total: ${capturedValues.length} | 
+                    <span style="color: #ef4444;">NULLs: ${nullCount}</span> | 
+                    <span style="color: #fbbf24;">Empty: ${emptyCount}</span> | 
+                    <span style="color: #4ade80;">Normal: ${normalCount}</span>
+                </div>
+            `;
+        }
+        
+        // Testar conexão
+        async function testConnection() {
+            addLog('Testando conexão com a aplicação...');
+            testResults.innerHTML = '';
+            
+            try {
+                // Teste 1: Verificar se o servidor está rodando
+                const response = await fetch('http://localhost:3030/');
+                const test1 = document.createElement('div');
+                test1.className = response.ok ? 'test-status success' : 'test-status error';
+                test1.textContent = `Servidor Vite: ${response.ok ? '✅ Online' : '❌ Offline'}`;
+                testResults.appendChild(test1);
+                
+                if (response.ok) {
+                    appStatus.className = 'dot green';
+                    appText.textContent = 'App: Online';
+                    addLog('Servidor está online', 'success');
+                } else {
+                    appStatus.className = 'dot red';
+                    appText.textContent = 'App: Erro';
+                    addLog('Servidor retornou erro: ' + response.status, 'error');
+                }
+                
+                // Teste 2: Verificar API
+                const apiResponse = await fetch('http://localhost:3030/api/health').catch(() => null);
+                const test2 = document.createElement('div');
+                test2.className = apiResponse && apiResponse.ok ? 'test-status success' : 'test-status error';
+                test2.textContent = `API Backend: ${apiResponse && apiResponse.ok ? '✅ Online' : '⚠️ Não disponível'}`;
+                testResults.appendChild(test2);
+                
+            } catch (error) {
+                appStatus.className = 'dot red';
+                appText.textContent = 'App: Offline';
+                addLog('Erro ao conectar: ' + error.message, 'error');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'test-status error';
+                errorDiv.textContent = '❌ Erro: ' + error.message;
+                testResults.appendChild(errorDiv);
+            }
+        }
+        
+        // Limpar capturas
+        function clearCaptures() {
+            capturedValues = [];
+            updateCapturedValuesDisplay();
+            addLog('Capturas limpas');
+        }
+        
+        // Simular dados para teste
+        function simulateData() {
+            addLog('Simulando dados de teste...');
+            
+            // Simular valor NULL
+            console.log('CellRenderer Raw Mode - value:', null, 'type:', typeof null, 'is null?:', true, 'is empty string?:', false);
+            
+            // Simular string vazia
+            console.log('CellRenderer Raw Mode - value:', '', 'type:', 'string', 'is null?:', false, 'is empty string?:', true);
+            
+            // Simular valor normal
+            console.log('CellRenderer Raw Mode - value:', 'João Silva', 'type:', 'string', 'is null?:', false, 'is empty string?:', false);
+            
+            // Simular undefined
+            console.log('CellRenderer Raw Mode - value:', undefined, 'type:', 'undefined', 'is null?:', false, 'is empty string?:', false);
+            
+            addLog('4 valores simulados adicionados', 'success');
+        }
+        
+        // Inicialização
+        function init() {
+            addLog('Raw Data Debug Monitor iniciado');
+            appStatus.className = 'dot yellow';
+            appText.textContent = 'App: Verificando...';
+            
+            // Testar conexão automaticamente após 1 segundo
+            setTimeout(testConnection, 1000);
+            
+            // Atualizar display
+            updateCapturedValuesDisplay();
+        }
+        
+        // Iniciar quando a página carregar
+        window.addEventListener('DOMContentLoaded', init);
+        
+        // Também adicionar listener para erros
+        window.addEventListener('error', function(e) {
+            addLog(`Erro JavaScript: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+        });
+    </script>
+</body>
+</html>
