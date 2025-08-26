@@ -1,0 +1,128 @@
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+filebeat.autodiscover:
+  providers:
+    - type: kubernetes
+      node: ${NODE_NAME}
+      hints.enabled: true
+      hints.default_config:
+        type: container
+        paths:
+          - /var/log/containers/*${data.kubernetes.container.id}.log
+
+processors:
+  - add_kubernetes_metadata:
+      host: ${NODE_NAME}
+      matchers:
+      - logs_path:
+          logs_path: "/var/log/containers/"
+  - drop_event:
+      when:
+        or:
+          - contains:
+              kubernetes.container.name: "filebeat"
+          - contains:
+              kubernetes.container.name: "prometheus"
+          - contains:
+              kubernetes.container.name: "grafana"
+
+output.elasticsearch:
+  hosts: ['${ELASTICSEARCH_HOST:elasticsearch}:${ELASTICSEARCH_PORT:9200}']
+  username: ${ELASTICSEARCH_USERNAME:""}
+  password: ${ELASTICSEARCH_PASSWORD:""}
+
+# Alternative output for development
+#output.console:
+#  pretty: true
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+
+setup.kibana:
+  host: "kibana:5601"
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# Custom input for application logs
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /app/logs/*.log
+  fields:
+    service: plataforma-backend
+    environment: ${ENVIRONMENT:production}
+  fields_under_root: true
+  json.keys_under_root: true
+  json.add_error_key: true
+  multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+  multiline.negate: true
+  multiline.match: after
+
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/*.log
+  fields:
+    service: plataforma-frontend
+    environment: ${ENVIRONMENT:production}
+  fields_under_root: true
+
+# Module configurations
+filebeat.modules:
+- module: nginx
+  access:
+    enabled: true
+    var.paths: ["/var/log/nginx/access.log*"]
+  error:
+    enabled: true
+    var.paths: ["/var/log/nginx/error.log*"]
+
+- module: postgresql
+  log:
+    enabled: true
+    var.paths: ["/var/log/postgresql/*.log"]
+
+- module: redis
+  log:
+    enabled: true
+    var.paths: ["/var/log/redis/*.log"]
+
+# Kubernetes-specific configuration
+filebeat.autodiscover:
+  providers:
+    - type: kubernetes
+      scope: cluster
+      node: ${NODE_NAME}
+      unique: true
+      templates:
+        - condition:
+            contains:
+              kubernetes.labels.app: "plataforma"
+          config:
+            - type: container
+              paths:
+                - /var/log/containers/*-${data.kubernetes.container.id}.log
+              processors:
+                - add_kubernetes_metadata:
+                    host: ${NODE_NAME}
+                    matchers:
+                    - logs_path:
+                        logs_path: "/var/log/containers/"
+
+# Performance tuning
+queue.mem.events: 4096
+queue.mem.flush.min_events: 512
+queue.mem.flush.timeout: 5s
+
+max_procs: 2

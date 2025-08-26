@@ -1,62 +1,122 @@
-node_modules
-dist
-.git
-.gitignore
-README.md
-.env
-.env.local
-.env.development
-.env.test
-.env.production
+# Dependency directories
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.DS_Store
-.vscode
-.idea
+pnpm-debug.log*
+
+# Production build directories
+dist/
+build/
+coverage/
+.next/
+.nuxt/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
 .cursor
-coverage
-.nyc_output
-.eslintcache
-*.log
-*.lock
-*.tmp
-*.tmp.*
-log.txt
 
+# OS generated files
 .DS_Store
-node_modules
-**/node_modules/**
-build
-data
-.env
-load-ids.txt
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-server
-tmp
-types
-.git
+# Git
+.git/
 .gitignore
-dist
-service
-tests
-fixtures-pages
-fixtures-apps
+.gitattributes
+
+# Cache directories
+.cache/
+.parcel-cache/
+.vite/
+.rollup.cache/
+.tsbuildinfo
+.eslintcache
+.jest-cache/
+
+# Testing
+test-results/
+playwright-report/
+__screenshots__/
+coverage/
+*.lcov
+
+# Documentation
+README.md
+CHANGELOG.md
+docs/
+*.md
+
+# Temporary files
+*.tmp
+*.temp
+.temporary/
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Development tools
+.husky/
+
+# Backup files
+*.bak
+*.backup
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Monorepo specific
+packages/*/node_modules
+packages/*/dist
+packages/*/coverage
+
+# Build artifacts
+*.tar.gz
+*.zip
+
+# Security
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
 
 # Netlify
 .netlify
-packages/ml-air/lib
-packages/ml-air/bin
-packages/ml-air/project
-packages/ml-air/share
-packages/ml-air/random_forest_classification/
-packages/ml-air/__pycache__/
-packages/ml-air/app/__pycache__/
-packages/vcp-common/native-bridge/build
-packages/vcp-common/_tests_/dataset-ranking.csv
-node_modules/
-Dockerfile
-.gitignore

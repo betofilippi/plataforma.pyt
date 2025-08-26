@@ -30,7 +30,12 @@
     "paths": {
       "@/*": ["./client/*"],
       "@shared/*": ["./shared/*"],
-      "@/modulos/*": ["./modulos/*"]
+      "@/modulos/*": ["./modulos/*"],
+      "@plataforma/types": ["./packages/types/src"],
+      "@plataforma/core-window-system": ["./packages/core-window-system/src"],
+      "@plataforma/design-system": ["./packages/design-system/src"],
+      "@plataforma/auth-system": ["./packages/auth-system/src"],
+      "@plataforma/sdk": ["./packages/sdk/src"]
     }
   },
   "include": [
@@ -38,6 +43,7 @@
     "server/**/*",
     "shared/**/*",
     "modulos/**/*",
+    "packages/**/*",
     "vite.config.ts",
     "vite.config.server.ts"
   ],

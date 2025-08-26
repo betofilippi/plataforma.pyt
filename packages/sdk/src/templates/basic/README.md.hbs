@@ -1,0 +1,219 @@
+# {{displayName}}
+
+{{description}}
+
+## 🚀 Instalação
+
+```bash
+npm install {{name}}
+```
+
+## 📋 Uso
+
+Este módulo foi criado com o Plataforma SDK e segue os padrões da Plataforma.app.
+
+### Importação
+
+```typescript
+import {{name}}, { ModuleComponent } from '{{name}}';
+
+// Ou importar apenas o componente
+import { ModuleComponent } from '{{name}}/components';
+```
+
+### Configuração
+
+```typescript
+const moduleConfig = {
+  name: '{{name}}',
+  displayName: '{{displayName}}',
+  version: '{{version}}',
+  category: '{{category}}'
+};
+```
+
+## 🛠️ Desenvolvimento
+
+### Pré-requisitos
+
+- Node.js >= 18
+- npm >= 8
+- Plataforma SDK
+
+### Comandos Disponíveis
+
+```bash
+# Desenvolvimento
+npm run dev
+
+# Build de produção
+npm run build
+
+# Executar testes
+npm run test
+
+# Validar módulo
+npm run validate
+
+# Lint
+npm run lint
+npm run lint:fix
+
+# Type check
+npm run type-check
+```
+
+### Estrutura do Projeto
+
+```
+{{name}}/
+├── src/
+│   ├── components/          # Componentes React
+│   │   ├── ModuleComponent.tsx
+│   │   └── index.ts
+│   ├── types/              # Definições TypeScript
+│   │   └── index.ts
+│   ├── utils/              # Utilitários
+│   │   └── index.ts
+│   └── index.ts            # Entry point
+├── assets/                 # Assets estáticos
+├── dist/                   # Build output
+├── module.json            # Configuração do módulo
+├── package.json
+└── README.md
+```
+
+## 🎨 Customização
+
+### Componentes
+
+O componente principal está em `src/components/ModuleComponent.tsx`. Você pode:
+
+- Adicionar novos componentes na pasta `components/`
+- Usar os componentes do design system: `@plataforma/design-system`
+- Integrar com o sistema de janelas: `@plataforma/core-window-system`
+- Usar autenticação: `@plataforma/auth-system`
+
+### Tipos
+
+Defina tipos TypeScript personalizados em `src/types/index.ts`.
+
+### Utilitários
+
+Adicione funções auxiliares em `src/utils/index.ts`.
+
+## 🔧 Configuração do Módulo
+
+O arquivo `module.json` contém as configurações do módulo:
+
+```json
+{
+  "name": "{{name}}",
+  "displayName": "{{displayName}}",
+  "version": "{{version}}",
+  "category": "{{category}}",
+  "features": {
+    "windowSystem": true,
+    "database": false,
+    "ai": false,
+    "realtime": false
+  }
+}
+```
+
+## 📚 APIs Disponíveis
+
+### Design System
+
+```typescript
+import { 
+  WindowCard, 
+  WindowButton, 
+  WindowInput,
+  WindowToggle 
+} from '@plataforma/design-system';
+```
+
+### Sistema de Janelas
+
+```typescript
+import { 
+  useWindowManager,
+  useWindowState 
+} from '@plataforma/core-window-system';
+```
+
+### Autenticação
+
+```typescript
+import { useAuth } from '@plataforma/auth-system';
+
+function MyComponent() {
+  const { user, login, logout } = useAuth();
+  
+  // Usar dados do usuário
+}
+```
+
+## 🧪 Testes
+
+```bash
+# Executar todos os testes
+npm run test
+
+# Executar testes em watch mode
+npm test -- --watch
+
+# Executar com coverage
+npm test -- --coverage
+```
+
+### Exemplo de Teste
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import { ModuleComponent } from '../components/ModuleComponent';
+
+describe('ModuleComponent', () => {
+  it('should render without crashing', () => {
+    render(<ModuleComponent />);
+    expect(screen.getByText('{{displayName}}')).toBeInTheDocument();
+  });
+});
+```
+
+## 📦 Build e Deploy
+
+```bash
+# Build para produção
+npm run build
+
+# Validar antes do deploy
+npm run validate
+
+# Publicar (se configurado)
+plataforma publish
+```
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 🆘 Suporte
+
+- 📖 [Documentação da Plataforma SDK](https://docs.plataforma.app/sdk)
+- 💬 [Discord da Comunidade](https://discord.gg/plataforma)
+- 🐛 [Reportar Bug](https://github.com/plataforma-app/{{name}}/issues)
+- 💡 [Solicitar Feature](https://github.com/plataforma-app/{{name}}/issues)
+
+---
+
+Criado com ❤️ usando [Plataforma SDK](https://github.com/plataforma-app/sdk)

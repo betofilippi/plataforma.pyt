@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@plataforma/types": ["../types/src"],
+      "@plataforma/core-window-system": ["../core-window-system/src"],
+      "@plataforma/design-system": ["../design-system/src"],
+      "@plataforma/auth-system": ["../auth-system/src"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"],
+  "references": [
+    { "path": "../types" },
+    { "path": "../core-window-system" },
+    { "path": "../design-system" },
+    { "path": "../auth-system" }
+  ]
+}

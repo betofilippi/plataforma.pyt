@@ -20,6 +20,7 @@ import Index from "./pages/Index";
 import { lazy, Suspense } from "react";
 const DatabaseModule = lazy(() => import("./pages/DatabaseModule"));
 const SistemaModule = lazy(() => import("./pages/SistemaModule"));
+const MarketplaceModule = lazy(() => import("./pages/MarketplaceModule"));
 import PlatformDashboardFixed from "./pages/PlatformDashboardFixed";
 import Login from "./pages/Login";
 import { AuthCallback } from "./components/auth/AuthCallback";
@@ -28,6 +29,7 @@ import BaseModuleTemplate from "./pages/BaseModuleTemplate";
 import NotFound from "./pages/NotFound";
 const PermissionManagement = lazy(() => import("./pages/PermissionManagement"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
+const ModuleFederationDemo = lazy(() => import("./components/ModuleFederationDemo"));
 
 const queryClient = new QueryClient();
 
@@ -91,6 +93,22 @@ const App = () => (
                   </ProtectedRoute>
                 } />
 
+                {/* MARKETPLACE - Marketplace de Módulos - Protected & Lazy loaded */}
+                <Route path="/marketplace/*" element={
+                  <ProtectedRoute>
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center h-screen">
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-gray-600">Carregando marketplace...</p>
+                        </div>
+                      </div>
+                    }>
+                      <MarketplaceModule />
+                    </Suspense>
+                  </ProtectedRoute>
+                } />
+
 
 
                 {/* PERMISSION MANAGEMENT - Admin Only */}
@@ -133,6 +151,21 @@ const App = () => (
                   </ProtectedRoute>
                 } />
 
+                {/* MODULE FEDERATION DEMO - Protected - For development and testing */}
+                <Route path="/module-federation" element={
+                  <ProtectedRoute requiredRole={['admin', 'developer']}>
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center h-screen">
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                          <p className="text-gray-600">Carregando Module Federation Demo...</p>
+                        </div>
+                      </div>
+                    }>
+                      <ModuleFederationDemo />
+                    </Suspense>
+                  </ProtectedRoute>
+                } />
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

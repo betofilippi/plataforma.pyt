@@ -311,6 +311,18 @@ export const MODULE_COLORS: Record<string, ModuleColor> = {
       medium: 'rgba(14, 165, 233, 0.3)',
       strong: 'rgba(14, 165, 233, 0.5)'
     }
+  },
+
+  marketplace: {
+    primary: '#7C3AED',
+    secondary: '#6D28D9',
+    accent: '#8B5CF6',
+    gradient: 'from-violet-700 to-violet-800',
+    rgba: {
+      light: 'rgba(124, 58, 237, 0.1)',
+      medium: 'rgba(124, 58, 237, 0.3)',
+      strong: 'rgba(124, 58, 237, 0.5)'
+    }
   }
 };
 

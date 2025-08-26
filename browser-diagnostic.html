@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma.app - Browser Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #0f0f0f;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+        .diagnostic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .diagnostic-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #22c55e; }
+        .status-error { background-color: #ef4444; }
+        .status-warning { background-color: #f59e0b; }
+        .status-unknown { background-color: #6b7280; }
+        
+        .console-output {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error-log { color: #ff6b6b; }
+        .warn-log { color: #ffd93d; }
+        .info-log { color: #6bcf7f; }
+        
+        .test-section {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #4338ca;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #3730a3;
+        }
+        
+        .copy-btn {
+            background: #059669;
+            float: right;
+        }
+        .copy-btn:hover {
+            background: #047857;
+        }
+        
+        .network-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .network-table th,
+        .network-table td {
+            border: 1px solid #333;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+        .network-table th {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .status-200 { color: #22c55e; }
+        .status-404 { color: #f59e0b; }
+        .status-500 { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Plataforma.app Browser Diagnostic</h1>
+            <p>Real-time browser error detection and analysis</p>
+            <div>
+                <button onclick="runFullDiagnostic()">🔍 Run Full Diagnostic</button>
+                <button onclick="clearLogs()">🧹 Clear Logs</button>
+                <button onclick="exportReport()" class="copy-btn">📋 Copy Report</button>
+            </div>
+        </div>
+
+        <div class="diagnostic-grid">
+            <!-- Core Systems Status -->
+            <div class="diagnostic-card">
+                <h3>🌐 Core Systems Status</h3>
+                <div id="core-status">
+                    <div><span class="status-indicator status-unknown"></span>HTML Document: <span id="html-status">Checking...</span></div>
+                    <div><span class="status-indicator status-unknown"></span>Root Element: <span id="root-status">Checking...</span></div>
+                    <div><span class="status-indicator status-unknown"></span>JavaScript Loading: <span id="js-status">Checking...</span></div>
+                    <div><span class="status-indicator status-unknown"></span>React Mount: <span id="react-status">Checking...</span></div>
+                    <div><span class="status-indicator status-unknown"></span>Server Connection: <span id="server-status">Checking...</span></div>
+                </div>
+            </div>
+
+            <!-- Network Status -->
+            <div class="diagnostic-card">
+                <h3>📡 Network Analysis</h3>
+                <div id="network-status">
+                    <div><span class="status-indicator status-unknown"></span>Localhost:3030: <span id="port-3030-status">Checking...</span></div>
+                    <div><span class="status-indicator status-unknown"></span>API Endpoint: <span id="api-status">Checking...</span></div>
+                    <div><span class="status-indicator status-unknown"></span>Static Assets: <span id="assets-status">Checking...</span></div>
+                </div>
+                
+                <h4>📊 Recent Network Requests</h4>
+                <table class="network-table" id="network-table">
+                    <thead>
+                        <tr>
+                            <th>URL</th>
+                            <th>Status</th>
+                            <th>Type</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="network-tbody">
+                        <tr><td colspan="4">No requests captured yet...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Console Output -->
+        <div class="diagnostic-card">
+            <h3>🖥️ Browser Console Output</h3>
+            <button onclick="clearConsoleOutput()" style="float: right;">Clear Console</button>
+            <div id="console-output" class="console-output">
+                [Diagnostic] Console monitoring started...
+            </div>
+        </div>
+
+        <!-- Error Analysis -->
+        <div class="diagnostic-card">
+            <h3>🚨 Error Analysis</h3>
+            <div id="error-analysis">
+                <p>Running diagnostic checks...</p>
+            </div>
+        </div>
+
+        <!-- Manual Tests -->
+        <div class="diagnostic-card">
+            <h3>🧪 Manual Tests</h3>
+            <div class="test-section">
+                <button onclick="testMainApp()">Test Main App Load</button>
+                <button onclick="testReactComponent()">Test React Components</button>
+                <button onclick="testModuleImports()">Test Module Imports</button>
+                <button onclick="testLocalStorage()">Test LocalStorage</button>
+            </div>
+            <div id="manual-test-results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for diagnostic
+        let consoleLog = [];
+        let networkRequests = [];
+        let diagnosticResults = {};
+
+        // Initialize diagnostic on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDiagnostic();
+            setTimeout(runFullDiagnostic, 1000);
+        });
+
+        function initializeDiagnostic() {
+            // Override console methods to capture logs
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalWarn = console.warn;
+
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                addToConsoleOutput('info', args.join(' '));
+            };
+
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                addToConsoleOutput('error', args.join(' '));
+            };
+
+            console.warn = function(...args) {
+                originalWarn.apply(console, args);
+                addToConsoleOutput('warn', args.join(' '));
+            };
+
+            // Capture unhandled errors
+            window.addEventListener('error', function(e) {
+                addToConsoleOutput('error', `Unhandled Error: ${e.message} at ${e.filename}:${e.lineno}:${e.colno}`);
+                updateErrorAnalysis();
+            });
+
+            // Capture unhandled promise rejections
+            window.addEventListener('unhandledrejection', function(e) {
+                addToConsoleOutput('error', `Unhandled Promise Rejection: ${e.reason}`);
+                updateErrorAnalysis();
+            });
+
+            console.log('[Diagnostic] Browser diagnostic initialized');
+        }
+
+        function addToConsoleOutput(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            consoleLog.push({ type, message: logEntry, timestamp });
+            
+            const output = document.getElementById('console-output');
+            const div = document.createElement('div');
+            div.className = type + '-log';
+            div.textContent = logEntry;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearConsoleOutput() {
+            document.getElementById('console-output').innerHTML = '[Diagnostic] Console cleared...';
+            consoleLog = [];
+        }
+
+        function clearLogs() {
+            clearConsoleOutput();
+            networkRequests = [];
+            document.getElementById('network-tbody').innerHTML = '<tr><td colspan="4">No requests captured yet...</td></tr>';
+        }
+
+        async function runFullDiagnostic() {
+            console.log('[Diagnostic] Starting full diagnostic...');
+            
+            // Test basic HTML/DOM
+            await testHTMLStructure();
+            
+            // Test network connectivity
+            await testNetworkConnectivity();
+            
+            // Test React/JS loading
+            await testJavaScriptLoading();
+            
+            // Test specific plataforma.app endpoints
+            await testPlataformaEndpoints();
+            
+            // Update error analysis
+            updateErrorAnalysis();
+            
+            console.log('[Diagnostic] Full diagnostic complete');
+        }
+
+        async function testHTMLStructure() {
+            // Test root element
+            const rootElement = document.getElementById('root');
+            updateStatus('root-status', rootElement ? 'Found ✅' : 'Missing ❌', rootElement ? 'success' : 'error');
+            
+            // Test HTML document
+            updateStatus('html-status', 'Loaded ✅', 'success');
+            
+            diagnosticResults.htmlStructure = {
+                rootElement: !!rootElement,
+                documentReady: document.readyState === 'complete'
+            };
+        }
+
+        async function testNetworkConnectivity() {
+            // Test main port
+            try {
+                const response = await fetch('http://localhost:3030/', { method: 'HEAD' });
+                updateStatus('port-3030-status', `Connected (${response.status}) ✅`, 'success');
+                addNetworkRequest('http://localhost:3030/', response.status, 'HEAD');
+            } catch (error) {
+                updateStatus('port-3030-status', `Failed ❌ (${error.message})`, 'error');
+                addNetworkRequest('http://localhost:3030/', 'ERROR', 'HEAD');
+            }
+
+            // Test API endpoint
+            try {
+                const response = await fetch('http://localhost:3030/api/health', { method: 'HEAD' });
+                updateStatus('api-status', `API Available (${response.status}) ✅`, 'success');
+                addNetworkRequest('http://localhost:3030/api/health', response.status, 'HEAD');
+            } catch (error) {
+                updateStatus('api-status', `API Failed ❌`, 'error');
+                addNetworkRequest('http://localhost:3030/api/health', 'ERROR', 'HEAD');
+            }
+        }
+
+        async function testJavaScriptLoading() {
+            // Check if React is available
+            const reactAvailable = typeof window.React !== 'undefined';
+            updateStatus('js-status', reactAvailable ? 'React Loaded ✅' : 'React Missing ❌', reactAvailable ? 'success' : 'error');
+            
+            // Try to find main script
+            const scripts = document.querySelectorAll('script[src]');
+            const mainScript = Array.from(scripts).find(script => script.src.includes('/client/main.tsx'));
+            
+            if (mainScript) {
+                console.log('[Diagnostic] Found main script:', mainScript.src);
+            } else {
+                console.log('[Diagnostic] Main script not found in DOM');
+            }
+        }
+
+        async function testPlataformaEndpoints() {
+            const endpoints = [
+                '/client/main.tsx',
+                '/client/App.tsx',
+                '/api/postgres/schemas'
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`http://localhost:3030${endpoint}`, { method: 'HEAD' });
+                    console.log(`[Diagnostic] ${endpoint}: ${response.status}`);
+                    addNetworkRequest(`http://localhost:3030${endpoint}`, response.status, 'HEAD');
+                } catch (error) {
+                    console.log(`[Diagnostic] ${endpoint}: ERROR - ${error.message}`);
+                    addNetworkRequest(`http://localhost:3030${endpoint}`, 'ERROR', 'HEAD');
+                }
+            }
+        }
+
+        function updateStatus(elementId, message, status) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = message;
+                const indicator = element.parentElement.querySelector('.status-indicator');
+                if (indicator) {
+                    indicator.className = `status-indicator status-${status}`;
+                }
+            }
+        }
+
+        function addNetworkRequest(url, status, type) {
+            const timestamp = new Date().toLocaleTimeString();
+            networkRequests.push({ url, status, type, timestamp });
+            
+            const tbody = document.getElementById('network-tbody');
+            if (networkRequests.length === 1) {
+                tbody.innerHTML = ''; // Clear "no requests" message
+            }
+            
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${url}</td>
+                <td class="status-${status}">${status}</td>
+                <td>${type}</td>
+                <td>${timestamp}</td>
+            `;
+        }
+
+        function updateErrorAnalysis() {
+            const errors = consoleLog.filter(log => log.type === 'error');
+            const warnings = consoleLog.filter(log => log.type === 'warn');
+            
+            let analysis = '<h4>📊 Error Summary</h4>';
+            analysis += `<p>🔴 Errors: ${errors.length} | 🟡 Warnings: ${warnings.length}</p>`;
+            
+            if (errors.length > 0) {
+                analysis += '<h5>Recent Errors:</h5><ul>';
+                errors.slice(-5).forEach(error => {
+                    analysis += `<li style="color: #ff6b6b;">${error.message}</li>`;
+                });
+                analysis += '</ul>';
+            }
+
+            // Specific checks for plataforma.app issues
+            const hasModuleError = errors.some(e => e.message.includes('virtual:shared-lucide-react'));
+            const hasReactError = errors.some(e => e.message.includes('React'));
+            const hasNetworkError = networkRequests.some(r => r.status === 'ERROR' || r.status >= 500);
+
+            analysis += '<h5>🎯 Specific Issues Detected:</h5><ul>';
+            if (hasModuleError) {
+                analysis += '<li style="color: #ef4444;">❌ Module resolution error detected (virtual:shared-lucide-react)</li>';
+            }
+            if (hasReactError) {
+                analysis += '<li style="color: #ef4444;">❌ React mounting issues detected</li>';
+            }
+            if (hasNetworkError) {
+                analysis += '<li style="color: #ef4444;">❌ Network connectivity issues detected</li>';
+            }
+            if (!hasModuleError && !hasReactError && !hasNetworkError) {
+                analysis += '<li style="color: #22c55e;">✅ No critical issues detected</li>';
+            }
+            analysis += '</ul>';
+            
+            document.getElementById('error-analysis').innerHTML = analysis;
+        }
+
+        // Manual test functions
+        function testMainApp() {
+            console.log('[Test] Testing main app load...');
+            window.location.href = 'http://localhost:3030';
+        }
+
+        function testReactComponent() {
+            console.log('[Test] Testing React component rendering...');
+            const rootElement = document.getElementById('root');
+            if (rootElement) {
+                console.log('[Test] Root element found:', rootElement);
+                console.log('[Test] Root element children:', rootElement.children.length);
+            } else {
+                console.log('[Test] Root element not found!');
+            }
+        }
+
+        function testModuleImports() {
+            console.log('[Test] Testing module imports...');
+            // Try to access common globals
+            console.log('[Test] React available:', typeof window.React !== 'undefined');
+            console.log('[Test] ReactDOM available:', typeof window.ReactDOM !== 'undefined');
+        }
+
+        function testLocalStorage() {
+            console.log('[Test] Testing localStorage...');
+            try {
+                localStorage.setItem('test', 'value');
+                const value = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                console.log('[Test] localStorage working:', value === 'value');
+            } catch (error) {
+                console.log('[Test] localStorage error:', error.message);
+            }
+        }
+
+        function exportReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                diagnosticResults,
+                consoleLog: consoleLog.slice(-50), // Last 50 entries
+                networkRequests: networkRequests.slice(-20), // Last 20 requests
+                errors: consoleLog.filter(log => log.type === 'error'),
+                warnings: consoleLog.filter(log => log.type === 'warn')
+            };
+
+            const reportText = JSON.stringify(report, null, 2);
+            navigator.clipboard.writeText(reportText).then(() => {
+                alert('Diagnostic report copied to clipboard!');
+            }).catch(() => {
+                // Fallback - open in new window
+                const newWindow = window.open();
+                newWindow.document.write(`<pre>${reportText}</pre>`);
+            });
+        }
+    </script>
+</body>
+</html>

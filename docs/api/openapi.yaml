@@ -1,0 +1,1291 @@
+openapi: 3.0.3
+info:
+  title: Plataforma.dev API
+  description: |
+    Complete API documentation for Plataforma.dev - the AI-first enterprise platform.
+    
+    This API provides comprehensive endpoints for:
+    - User authentication and authorization
+    - Module management and deployment
+    - Database operations with real-time updates
+    - File storage and management
+    - Real-time communication via WebSockets
+    
+    ## Authentication
+    
+    The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
+    
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Rate Limiting
+    
+    API requests are rate-limited to ensure fair usage:
+    - **General API**: 1000 requests per hour per IP
+    - **Authentication**: 10 attempts per 15 minutes per IP
+    - **File uploads**: 100 requests per hour per user
+    
+    Rate limit headers are included in responses:
+    - `X-RateLimit-Limit`: Request limit per time window
+    - `X-RateLimit-Remaining`: Remaining requests in current window
+    - `X-RateLimit-Reset`: Time when the rate limit resets
+    
+    ## Error Handling
+    
+    The API uses conventional HTTP response codes and returns detailed error information:
+    
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_FAILED",
+        "message": "Request validation failed",
+        "details": {
+          "field": "email",
+          "reason": "Invalid email format"
+        }
+      },
+      "timestamp": "2024-08-26T10:30:00Z"
+    }
+    ```
+  version: 2.0.0
+  contact:
+    name: Plataforma.dev Support
+    email: support@plataforma.dev
+    url: https://plataforma.dev/support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.plataforma.dev/v2
+    description: Production server
+  - url: https://staging-api.plataforma.dev/v2
+    description: Staging server
+  - url: http://localhost:4000/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              email_login:
+                summary: Email login
+                value:
+                  email: "user@example.com"
+                  password: "password123"
+                  rememberMe: true
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: Get a new access token using refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Invalidate current session and token
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/verify:
+    get:
+      tags:
+        - Authentication
+      summary: Verify JWT token
+      description: Check if current token is valid
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # User Management Endpoints
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieve the profile of the authenticated user
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Update the current user's profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List users (Admin only)
+      description: Get a paginated list of users
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: search
+          in: query
+          description: Search users by name or email
+          schema:
+            type: string
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [admin, manager, user]
+      responses:
+        '200':
+          description: Users list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Users
+      summary: Create user (Admin only)
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        description: User ID
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieve a specific user's information
+      responses:
+        '200':
+          description: User information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Users
+      summary: Update user (Admin only)
+      description: Update a user's information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user (Admin only)
+      description: Delete a user account
+      responses:
+        '204':
+          description: User deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Module Management Endpoints
+  /modules:
+    get:
+      tags:
+        - Modules
+      summary: List available modules
+      description: Get list of modules available to current user
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: category
+          in: query
+          description: Filter by module category
+          schema:
+            type: string
+            enum: [business, system, utility, integration, ai]
+        - name: search
+          in: query
+          description: Search modules by name or description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Modules list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModulesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /modules/{moduleId}:
+    parameters:
+      - name: moduleId
+        in: path
+        required: true
+        description: Module ID
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Modules
+      summary: Get module details
+      description: Retrieve detailed information about a specific module
+      responses:
+        '200':
+          description: Module details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleDetails'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /modules/{moduleId}/install:
+    parameters:
+      - name: moduleId
+        in: path
+        required: true
+        description: Module ID
+        schema:
+          type: string
+
+    post:
+      tags:
+        - Modules
+      summary: Install module
+      description: Install a module for the current organization
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallModuleRequest'
+      responses:
+        '200':
+          description: Module installed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallModuleResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Database Endpoints
+  /database/schemas:
+    get:
+      tags:
+        - Database
+      summary: List database schemas
+      description: Get list of database schemas accessible to current user
+      responses:
+        '200':
+          description: Schemas list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemasResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /database/tables:
+    get:
+      tags:
+        - Database
+      summary: List tables
+      description: Get list of tables in specified schema
+      parameters:
+        - name: schema
+          in: query
+          description: Schema name
+          schema:
+            type: string
+            default: public
+      responses:
+        '200':
+          description: Tables list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TablesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /database/tables/{tableName}/schema:
+    parameters:
+      - name: tableName
+        in: path
+        required: true
+        description: Table name
+        schema:
+          type: string
+      - name: schema
+        in: query
+        description: Schema name
+        schema:
+          type: string
+          default: public
+
+    get:
+      tags:
+        - Database
+      summary: Get table schema
+      description: Retrieve detailed schema information for a table
+      responses:
+        '200':
+          description: Table schema retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableSchema'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /database/query:
+    post:
+      tags:
+        - Database
+      summary: Execute SQL query
+      description: Execute SQL query and return results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # File Storage Endpoints
+  /storage/upload:
+    post:
+      tags:
+        - Storage
+      summary: Upload file
+      description: Upload file to object storage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                bucket:
+                  type: string
+                  description: Storage bucket name
+                path:
+                  type: string
+                  description: File path within bucket
+              required:
+                - file
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /storage/files:
+    get:
+      tags:
+        - Storage
+      summary: List files
+      description: List files in storage bucket
+      parameters:
+        - name: bucket
+          in: query
+          description: Storage bucket name
+          schema:
+            type: string
+        - name: prefix
+          in: query
+          description: File path prefix
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Files list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /storage/files/{fileId}/download:
+    parameters:
+      - name: fileId
+        in: path
+        required: true
+        description: File ID
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Storage
+      summary: Get download URL
+      description: Get temporary download URL for file
+      responses:
+        '200':
+          description: Download URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Permissions Endpoints
+  /permissions/me:
+    get:
+      tags:
+        - Permissions
+      summary: Get user permissions
+      description: Get current user's permissions and roles
+      responses:
+        '200':
+          description: Permissions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /permissions/check:
+    post:
+      tags:
+        - Permissions
+      summary: Check permission
+      description: Check if user has specific permission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionCheckRequest'
+      responses:
+        '200':
+          description: Permission check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionCheckResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Number of items to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 50
+
+    Offset:
+      name: offset
+      in: query
+      description: Number of items to skip
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  schemas:
+    # Authentication Schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+        rememberMe:
+          type: boolean
+          default: false
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/User'
+        expiresAt:
+          type: string
+          format: date-time
+          example: 2024-08-26T18:30:00Z
+
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    LogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Logged out successfully
+
+    VerifyResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/User'
+        expiresAt:
+          type: string
+          format: date-time
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          example: John Doe
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: string
+          example: [user, manager]
+        permissions:
+          type: array
+          items:
+            type: string
+        preferences:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - name
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        password:
+          type: string
+          format: password
+        roles:
+          type: array
+          items:
+            type: string
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        preferences:
+          type: object
+          additionalProperties: true
+
+    UsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        total:
+          type: integer
+        page:
+          $ref: '#/components/schemas/PageInfo'
+
+    # Module Schemas
+    Module:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        category:
+          type: string
+          enum: [business, system, utility, integration, ai]
+        permissions:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        lastUpdated:
+          type: string
+          format: date-time
+
+    ModuleDetails:
+      allOf:
+        - $ref: '#/components/schemas/Module'
+        - type: object
+          properties:
+            author:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+            dependencies:
+              type: array
+              items:
+                type: string
+            config:
+              type: object
+              additionalProperties: true
+            api:
+              type: object
+              properties:
+                endpoints:
+                  type: array
+                  items:
+                    type: string
+                events:
+                  type: array
+                  items:
+                    type: string
+            screenshots:
+              type: array
+              items:
+                type: string
+                format: uri
+
+    ModulesResponse:
+      type: object
+      properties:
+        modules:
+          type: array
+          items:
+            $ref: '#/components/schemas/Module'
+        total:
+          type: integer
+
+    InstallModuleRequest:
+      type: object
+      properties:
+        version:
+          type: string
+        config:
+          type: object
+          additionalProperties: true
+
+    InstallModuleResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        moduleId:
+          type: string
+        installedVersion:
+          type: string
+        message:
+          type: string
+
+    # Database Schemas
+    Schema:
+      type: object
+      properties:
+        name:
+          type: string
+        tables:
+          type: integer
+        owner:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    SchemasResponse:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Schema'
+
+    Table:
+      type: object
+      properties:
+        name:
+          type: string
+        schema:
+          type: string
+        columns:
+          type: integer
+        rows:
+          type: integer
+        size:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    TablesResponse:
+      type: object
+      properties:
+        tables:
+          type: array
+          items:
+            $ref: '#/components/schemas/Table'
+        schema:
+          type: string
+
+    Column:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        nullable:
+          type: boolean
+        default_value:
+          nullable: true
+        is_primary_key:
+          type: boolean
+        is_foreign_key:
+          type: boolean
+        foreign_key_table:
+          type: string
+          nullable: true
+        foreign_key_column:
+          type: string
+          nullable: true
+
+    TableSchema:
+      type: object
+      properties:
+        table_name:
+          type: string
+        schema:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Column'
+
+    QueryRequest:
+      type: object
+      required:
+        - sql
+      properties:
+        sql:
+          type: string
+          example: SELECT * FROM users WHERE active = true
+        parameters:
+          type: array
+          items: {}
+        schema:
+          type: string
+        limit:
+          type: integer
+          maximum: 10000
+        offset:
+          type: integer
+
+    QueryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        columns:
+          type: array
+          items:
+            type: string
+        total_rows:
+          type: integer
+        execution_time_ms:
+          type: number
+        affected_rows:
+          type: integer
+
+    # Storage Schemas
+    StorageFile:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        size:
+          type: integer
+        type:
+          type: string
+        url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        file:
+          $ref: '#/components/schemas/StorageFile'
+
+    FilesResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageFile'
+        total:
+          type: integer
+
+    DownloadResponse:
+      type: object
+      properties:
+        download_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
+
+    # Permission Schemas
+    Permission:
+      type: object
+      properties:
+        resource:
+          type: string
+        action:
+          type: string
+        scope:
+          type: string
+          enum: [own, team, organization, system]
+        conditions:
+          type: object
+          additionalProperties: true
+
+    PermissionsResponse:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        roles:
+          type: array
+          items:
+            type: string
+
+    PermissionCheckRequest:
+      type: object
+      required:
+        - resource
+        - action
+      properties:
+        resource:
+          type: string
+        action:
+          type: string
+        resourceId:
+          type: string
+
+    PermissionCheckResponse:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        reason:
+          type: string
+
+    # Common Schemas
+    PageInfo:
+      type: object
+      properties:
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_FAILED
+            message:
+              type: string
+              example: Request validation failed
+            details:
+              type: object
+              additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: VALIDATION_FAILED
+              message: Request validation failed
+              details:
+                field: email
+                reason: Invalid email format
+            timestamp: 2024-08-26T10:30:00Z
+
+    Unauthorized:
+      description: Unauthorized - Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: UNAUTHORIZED
+              message: Authentication required
+            timestamp: 2024-08-26T10:30:00Z
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: FORBIDDEN
+              message: Insufficient permissions
+            timestamp: 2024-08-26T10:30:00Z
+
+    NotFound:
+      description: Not found - Resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: NOT_FOUND
+              message: Resource not found
+            timestamp: 2024-08-26T10:30:00Z
+
+    RateLimitExceeded:
+      description: Too many requests
+      headers:
+        X-RateLimit-Limit:
+          description: Request limit per time window
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Time when the rate limit resets
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Too many requests, try again later
+              details:
+                limit: 1000
+                window: 3600
+                retry_after: 1800
+            timestamp: 2024-08-26T10:30:00Z
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User account management
+  - name: Modules
+    description: Module installation and management
+  - name: Database
+    description: Database operations and schema management
+  - name: Storage
+    description: File storage and management
+  - name: Permissions
+    description: User permissions and role management

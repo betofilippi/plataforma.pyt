@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: frontend
+    tier: web
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: plataforma
+    component: frontend
+  sessionAffinity: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-headless
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: frontend
+    tier: web
+spec:
+  clusterIP: None
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: plataforma
+    component: frontend

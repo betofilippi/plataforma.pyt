@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: plataforma
+  labels:
+    name: plataforma
+    app: plataforma
+    environment: base
+  annotations:
+    description: "Namespace for Plataforma.app application"

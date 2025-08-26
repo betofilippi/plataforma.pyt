@@ -1,0 +1,239 @@
+# {{displayName}}
+
+{{npmBadge name}} {{licenseBadge license}} {{buildBadge githubOwner name}}
+
+{{description}}
+
+## 🚀 Features
+
+{{#each features}}
+- {{this}}
+{{/each}}
+
+## 📦 Installation
+
+```bash
+npm install {{name}}
+```
+
+## 🔧 Usage
+
+### Basic Usage
+
+```tsx
+import { {{pascalCaseName}} } from '{{name}}';
+
+function App() {
+  return (
+    <{{pascalCaseName}} />
+  );
+}
+```
+
+### Advanced Configuration
+
+```tsx
+import { {{pascalCaseName}}, {{pascalCaseName}}Config } from '{{name}}';
+
+const config: {{pascalCaseName}}Config = {
+  // Configuration options
+};
+
+function App() {
+  return (
+    <{{pascalCaseName}} config={config} />
+  );
+}
+```
+
+## 🏗️ Development
+
+### Prerequisites
+
+- Node.js {{nodeVersion}}+
+- npm or yarn
+
+### Setup
+
+```bash
+# Clone repository
+git clone {{repositoryUrl}}.git
+cd {{name}}
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run test` - Run tests
+- `npm run lint` - Lint code
+- `npm run typecheck` - Type checking
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+```
+
+## 📚 API Reference
+
+### Components
+
+#### {{pascalCaseName}}
+
+Main component for the {{displayName}} module.
+
+**Props:**
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `config` | `{{pascalCaseName}}Config` | `{}` | Configuration object |
+| `onDataChange` | `(data: any) => void` | - | Callback for data changes |
+
+#### {{pascalCaseName}}Provider
+
+Context provider for the module.
+
+```tsx
+import { {{pascalCaseName}}Provider } from '{{name}}';
+
+function App() {
+  return (
+    <{{pascalCaseName}}Provider>
+      {/* Your app components */}
+    </{{pascalCaseName}}Provider>
+  );
+}
+```
+
+### Hooks
+
+#### use{{pascalCaseName}}
+
+Main hook for accessing module functionality.
+
+```tsx
+import { use{{pascalCaseName}} } from '{{name}}';
+
+function MyComponent() {
+  const { data, loading, error, refetch } = use{{pascalCaseName}}();
+  
+  return (
+    <div>
+      {loading && <div>Loading...</div>}
+      {error && <div>Error: {error.message}</div>}
+      {data && <div>{/* Render data */}</div>}
+    </div>
+  );
+}
+```
+
+## 🔧 Configuration
+
+### Module Configuration
+
+Create a `module.config.ts` file:
+
+```typescript
+import { ModuleConfig } from '{{name}}';
+
+export const config: ModuleConfig = {
+  // Module-specific configuration
+  apiUrl: process.env.API_URL,
+  features: {
+    realTime: true,
+    validation: true
+  }
+};
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_URL` | API endpoint URL | - |
+| `DEBUG` | Enable debug mode | `false` |
+
+## 🚀 Deployment
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### {{#if hasDocker}}Docker Deployment
+
+```bash
+# Build Docker image
+docker build -t {{name}} .
+
+# Run container
+docker run -p 3000:80 {{name}}
+```
+{{/if}}
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow the established coding style
+- Write tests for new features
+- Update documentation as needed
+- Use conventional commit messages
+
+## 📋 Roadmap
+
+- [ ] Enhanced data validation
+- [ ] Real-time synchronization
+- [ ] Advanced filtering options
+- [ ] Export functionality
+- [ ] Mobile responsiveness
+
+## 🐛 Known Issues
+
+- Issue 1: Description of the issue
+- Issue 2: Another issue description
+
+## 📄 License
+
+This project is licensed under the {{license}} License - see the [LICENSE](LICENSE) file for details.
+
+## 👥 Team
+
+- **{{author}}** - *Initial work* - [GitHub]({{githubUrl githubOwner}})
+
+## 🙏 Acknowledgments
+
+- Built with [Plataforma.app](https://plataforma.app)
+- Powered by [Module Federation](https://module-federation.github.io/)
+- UI components from [Plataforma Design System](https://github.com/plataforma/design-system)
+
+## 🔗 Related Projects
+
+- [@plataforma/core](https://github.com/plataforma/core) - Core platform functionality
+- [@plataforma/design-system](https://github.com/plataforma/design-system) - UI components
+- [@plataforma/module-contracts](https://github.com/plataforma/module-contracts) - Module contracts
+
+---
+
+Made with ❤️ by [{{author}}]({{githubUrl githubOwner}}) for [Plataforma.app](https://plataforma.app)

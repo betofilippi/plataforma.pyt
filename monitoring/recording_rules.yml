@@ -1,0 +1,227 @@
+groups:
+  - name: plataforma.recording.rules
+    interval: 30s
+    rules:
+      # Application metrics
+      - record: plataforma:http_requests:rate5m
+        expr: rate(http_requests_total{job="plataforma-backend"}[5m])
+
+      - record: plataforma:http_requests:rate1h
+        expr: rate(http_requests_total{job="plataforma-backend"}[1h])
+
+      - record: plataforma:http_request_duration:p50
+        expr: histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job="plataforma-backend"}[5m]))
+
+      - record: plataforma:http_request_duration:p95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="plataforma-backend"}[5m]))
+
+      - record: plataforma:http_request_duration:p99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="plataforma-backend"}[5m]))
+
+      - record: plataforma:error_rate:5m
+        expr: |
+          rate(http_requests_total{job="plataforma-backend", status=~"5.."}[5m]) /
+          rate(http_requests_total{job="plataforma-backend"}[5m]) * 100
+
+      - record: plataforma:error_rate:1h
+        expr: |
+          rate(http_requests_total{job="plataforma-backend", status=~"5.."}[1h]) /
+          rate(http_requests_total{job="plataforma-backend"}[1h]) * 100
+
+      # Business metrics
+      - record: plataforma:active_users:5m
+        expr: plataforma_active_users
+
+      - record: plataforma:module_executions:rate5m
+        expr: rate(plataforma_module_executions_total[5m])
+
+      - record: plataforma:database_queries:rate5m
+        expr: rate(plataforma_database_queries_total[5m])
+
+      - record: plataforma:api_calls_by_endpoint:rate5m
+        expr: |
+          sum by (endpoint) (
+            rate(http_requests_total{job="plataforma-backend"}[5m])
+          )
+
+      # Infrastructure metrics
+      - record: instance:cpu_usage:rate5m
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+      - record: instance:memory_usage:percentage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+
+      - record: instance:disk_usage:percentage
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100
+
+      - record: instance:network_receive:rate5m
+        expr: rate(node_network_receive_bytes_total[5m])
+
+      - record: instance:network_transmit:rate5m
+        expr: rate(node_network_transmit_bytes_total[5m])
+
+      # Database metrics
+      - record: postgres:connections:percentage
+        expr: |
+          (pg_stat_database_numbackends / pg_settings_max_connections) * 100
+
+      - record: postgres:transaction_rate:5m
+        expr: rate(pg_stat_database_xact_commit[5m]) + rate(pg_stat_database_xact_rollback[5m])
+
+      - record: postgres:query_duration:p95
+        expr: histogram_quantile(0.95, rate(pg_stat_statements_mean_time_bucket[5m]))
+
+      - record: postgres:cache_hit_ratio
+        expr: |
+          (
+            sum(pg_stat_database_blks_hit) /
+            (sum(pg_stat_database_blks_hit) + sum(pg_stat_database_blks_read))
+          ) * 100
+
+      # Redis metrics
+      - record: redis:operations:rate5m
+        expr: rate(redis_commands_processed_total[5m])
+
+      - record: redis:memory_usage:percentage
+        expr: (redis_memory_used_bytes / redis_config_maxmemory) * 100
+
+      - record: redis:hit_ratio:5m
+        expr: |
+          rate(redis_keyspace_hits_total[5m]) /
+          (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) * 100
+
+      # Kubernetes metrics
+      - record: kube:pod_cpu_usage:rate5m
+        expr: rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[5m])
+
+      - record: kube:pod_memory_usage:bytes
+        expr: container_memory_working_set_bytes{container!="POD",container!=""}
+
+      - record: kube:pod_network_receive:rate5m
+        expr: rate(container_network_receive_bytes_total[5m])
+
+      - record: kube:pod_network_transmit:rate5m
+        expr: rate(container_network_transmit_bytes_total[5m])
+
+      - record: kube:namespace_cpu_usage:rate5m
+        expr: |
+          sum by (namespace) (
+            rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[5m])
+          )
+
+      - record: kube:namespace_memory_usage:bytes
+        expr: |
+          sum by (namespace) (
+            container_memory_working_set_bytes{container!="POD",container!=""}
+          )
+
+  - name: sla.recording.rules
+    interval: 60s
+    rules:
+      # SLA tracking
+      - record: plataforma:availability:5m
+        expr: |
+          avg_over_time(up{job="plataforma-backend"}[5m]) * 100
+
+      - record: plataforma:availability:1h
+        expr: |
+          avg_over_time(up{job="plataforma-backend"}[1h]) * 100
+
+      - record: plataforma:availability:24h
+        expr: |
+          avg_over_time(up{job="plataforma-backend"}[24h]) * 100
+
+      - record: plataforma:sla_compliance:24h
+        expr: |
+          (
+            (plataforma:availability:24h >= 99.9) *
+            (plataforma:error_rate:1h < 1) *
+            (plataforma:http_request_duration:p95 < 2)
+          )
+
+  - name: capacity.recording.rules
+    interval: 300s
+    rules:
+      # Capacity planning metrics
+      - record: plataforma:requests_per_second:peak_1h
+        expr: |
+          max_over_time(
+            sum(rate(http_requests_total{job="plataforma-backend"}[5m]))[1h:]
+          )
+
+      - record: plataforma:requests_per_second:avg_24h
+        expr: |
+          avg_over_time(
+            sum(rate(http_requests_total{job="plataforma-backend"}[5m]))[24h:]
+          )
+
+      - record: plataforma:cpu_usage:peak_1h
+        expr: |
+          max_over_time(instance:cpu_usage:rate5m[1h])
+
+      - record: plataforma:memory_usage:peak_1h
+        expr: |
+          max_over_time(instance:memory_usage:percentage[1h])
+
+      - record: plataforma:concurrent_users:peak_1h
+        expr: |
+          max_over_time(plataforma_concurrent_users[1h])
+
+      - record: plataforma:database_connections:peak_1h
+        expr: |
+          max_over_time(pg_stat_database_numbackends[1h])
+
+  - name: cost.recording.rules
+    interval: 3600s  # hourly
+    rules:
+      # Cost tracking metrics (simplified examples)
+      - record: plataforma:compute_cost:hourly
+        expr: |
+          sum(
+            kube:namespace_cpu_usage:rate5m{namespace="plataforma"} * 0.048 +  # AWS EKS pricing
+            kube:namespace_memory_usage:bytes{namespace="plataforma"} / 1024^3 * 0.005
+          )
+
+      - record: plataforma:storage_cost:hourly
+        expr: |
+          sum(
+            (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_avail_bytes{fstype!="tmpfs"}) / 1024^3 * 0.10  # EBS pricing
+          )
+
+      - record: plataforma:network_cost:hourly
+        expr: |
+          sum(
+            rate(container_network_transmit_bytes_total[1h]) / 1024^3 * 0.09  # Data transfer pricing
+          )
+
+      - record: plataforma:total_cost:hourly
+        expr: |
+          plataforma:compute_cost:hourly +
+          plataforma:storage_cost:hourly +
+          plataforma:network_cost:hourly
+
+  - name: security.recording.rules
+    interval: 60s
+    rules:
+      # Security metrics
+      - record: plataforma:failed_logins:rate5m
+        expr: rate(plataforma_login_attempts_total{status="failed"}[5m])
+
+      - record: plataforma:successful_logins:rate5m
+        expr: rate(plataforma_login_attempts_total{status="success"}[5m])
+
+      - record: plataforma:suspicious_activity:rate5m
+        expr: |
+          rate(http_requests_total{job="plataforma-backend", status=~"4.."}[5m]) +
+          rate(plataforma_security_violations_total[5m])
+
+      - record: plataforma:rate_limit_hits:rate5m
+        expr: rate(http_requests_total{job="plataforma-backend", status="429"}[5m])
+
+      - record: plataforma:jwt_validation_failures:rate5m
+        expr: rate(plataforma_jwt_validation_failures_total[5m])
+
+      - record: plataforma:rbac_denials:rate5m
+        expr: rate(plataforma_rbac_denials_total[5m])

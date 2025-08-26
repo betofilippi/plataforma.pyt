@@ -1,0 +1,135 @@
+import React from 'react';
+import { WindowButton } from '@plataforma/design-system';
+import { Edit, Trash2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import type { DataItem } from '../types';
+import { formatDate } from '../utils';
+
+interface DataTableProps {
+  data: DataItem[];
+  isLoading: boolean;
+  onEdit: (item: DataItem) => void;
+  onDelete: (item: DataItem) => void;
+  emptyMessage?: string;
+}
+
+export function DataTable({ 
+  data, 
+  isLoading, 
+  onEdit, 
+  onDelete, 
+  emptyMessage = "Nenhum dado disponível" 
+}: DataTableProps) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircle className="w-4 h-4 text-emerald-400" />;
+      case 'inactive':
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      default:
+        return <Clock className="w-4 h-4 text-yellow-400" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+      case 'inactive':
+        return 'text-red-400 bg-red-500/10 border-red-500/20';
+      default:
+        return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex items-center gap-2 text-gray-400">
+          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          Carregando dados...
+        </div>
+      </div>
+    );
+  }
+
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-500/10 flex items-center justify-center">
+            <div className="w-8 h-8 text-gray-500">📋</div>
+          </div>
+          <p className="text-gray-400">{emptyMessage}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-auto max-h-96">
+      <table className="w-full">
+        <thead className="sticky top-0 bg-black/50 border-b border-white/10">
+          <tr>
+            <th className="text-left p-3 text-sm font-medium text-gray-300">Nome</th>
+            <th className="text-left p-3 text-sm font-medium text-gray-300">Descrição</th>
+            <th className="text-left p-3 text-sm font-medium text-gray-300">Status</th>
+            <th className="text-left p-3 text-sm font-medium text-gray-300">Criado em</th>
+            <th className="text-right p-3 text-sm font-medium text-gray-300">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((item, index) => (
+            <tr 
+              key={item.id}
+              className={`
+                border-b border-white/5 hover:bg-white/5 transition-colors
+                ${index % 2 === 0 ? 'bg-white/2' : ''}
+              `}
+            >
+              <td className="p-3">
+                <div className="font-medium text-white">{item.name}</div>
+              </td>
+              <td className="p-3">
+                <div className="text-gray-300 text-sm max-w-xs truncate">
+                  {item.description || '-'}
+                </div>
+              </td>
+              <td className="p-3">
+                <div className={`
+                  inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium border
+                  ${getStatusColor(item.status)}
+                `}>
+                  {getStatusIcon(item.status)}
+                  {item.status === 'active' ? 'Ativo' : item.status === 'inactive' ? 'Inativo' : item.status}
+                </div>
+              </td>
+              <td className="p-3">
+                <div className="text-gray-400 text-sm">
+                  {formatDate(item.created_at)}
+                </div>
+              </td>
+              <td className="p-3 text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <WindowButton
+                    variant="secondary"
+                    size="sm"
+                    icon={<Edit />}
+                    onClick={() => onEdit(item)}
+                    tooltip="Editar"
+                  />
+                  <WindowButton
+                    variant="danger"
+                    size="sm"
+                    icon={<Trash2 />}
+                    onClick={() => onDelete(item)}
+                    tooltip="Excluir"
+                  />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -1,0 +1,218 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: postgres
+spec:
+  serviceName: postgres-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plataforma
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: plataforma
+        component: postgres
+    spec:
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_DB
+          value: "plataforma"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 6
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - exec pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h 127.0.0.1 -p 5432
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 6
+      volumes:
+      - name: postgres-config
+        configMap:
+          name: postgres-config
+      - name: init-scripts
+        configMap:
+          name: postgres-init-scripts
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+      labels:
+        app: plataforma
+        component: postgres
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "fast-ssd"
+      resources:
+        requests:
+          storage: 20Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: plataforma
+    component: postgres
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: postgres
+spec:
+  clusterIP: None
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: plataforma
+    component: postgres
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: postgres
+data:
+  postgresql.conf: |
+    # PostgreSQL configuration for production
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    maintenance_work_mem = 64MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+    default_statistics_target = 100
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    work_mem = 4MB
+    min_wal_size = 1GB
+    max_wal_size = 4GB
+    max_worker_processes = 8
+    max_parallel_workers_per_gather = 2
+    max_parallel_workers = 8
+    max_parallel_maintenance_workers = 2
+    
+    # Logging
+    log_destination = 'stderr'
+    log_statement = 'all'
+    log_min_duration_statement = 1000
+    log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+    
+    # Security
+    ssl = off
+    password_encryption = scram-sha-256
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: plataforma
+  labels:
+    app: plataforma
+    component: postgres
+data:
+  01-create-extensions.sql: |
+    -- Create necessary extensions
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+    CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+  
+  02-create-schemas.sql: |
+    -- Create application schemas
+    CREATE SCHEMA IF NOT EXISTS plataforma_core;
+    CREATE SCHEMA IF NOT EXISTS sistema;
+    CREATE SCHEMA IF NOT EXISTS base_de_dados;
+    CREATE SCHEMA IF NOT EXISTS inteligencia_artificial;
+    
+    -- Grant permissions
+    GRANT USAGE ON SCHEMA plataforma_core TO plataforma;
+    GRANT USAGE ON SCHEMA sistema TO plataforma;
+    GRANT USAGE ON SCHEMA base_de_dados TO plataforma;
+    GRANT USAGE ON SCHEMA inteligencia_artificial TO plataforma;
+    
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA plataforma_core TO plataforma;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA sistema TO plataforma;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA base_de_dados TO plataforma;
+    GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA inteligencia_artificial TO plataforma;

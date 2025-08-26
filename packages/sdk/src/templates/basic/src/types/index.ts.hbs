@@ -1,0 +1,57 @@
+import React from 'react';
+
+/**
+ * Configuração do módulo
+ */
+export interface ModuleConfig {
+  name: string;
+  displayName: string;
+  version: string;
+  category: string;
+  description: string;
+  icon: string;
+  color: string;
+}
+
+/**
+ * Props do componente principal do módulo
+ */
+export interface ModuleComponentProps {
+  onClose?: () => void;
+  onMinimize?: () => void;
+  onMaximize?: () => void;
+  windowId?: string;
+  data?: any;
+}
+
+/**
+ * Exportações do módulo
+ */
+export interface ModuleExports {
+  config: ModuleConfig;
+  Component: React.ComponentType<ModuleComponentProps>;
+  hooks?: Record<string, any>;
+  utils?: Record<string, any>;
+  services?: Record<string, any>;
+}
+
+/**
+ * Estados do módulo
+ */
+export interface ModuleState {
+  isLoading: boolean;
+  error?: string;
+  data?: any[];
+}
+
+/**
+ * Ações do módulo
+ */
+export type ModuleAction = 
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string }
+  | { type: 'SET_DATA'; payload: any[] }
+  | { type: 'ADD_DATA'; payload: any }
+  | { type: 'CLEAR_DATA' };
+
+// Adicione mais tipos específicos do seu módulo aqui

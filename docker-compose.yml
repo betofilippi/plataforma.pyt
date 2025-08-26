@@ -1,0 +1,170 @@
+version: '3.8'
+
+services:
+  # Frontend (Nginx serving static files)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: nginx
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=production
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Backend (Node.js API server)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://plataforma:plataforma_password@postgres:5432/plataforma
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-default-jwt-secret-change-in-production}
+      - DEMO_MODE=${DEMO_MODE:-false}
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - app-storage:/app/storage
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=plataforma
+      - POSTGRES_USER=plataforma
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-plataforma_password}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plataforma -d plataforma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - redis-data:/data
+
+  # Development services (only for local development)
+  dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    ports:
+      - "3030:3030"
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - NODE_ENV=development
+      - VITE_DEMO_MODE=true
+      - DATABASE_URL=postgresql://plataforma:plataforma_password@postgres:5432/plataforma
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-jwt-secret
+    networks:
+      - plataforma-network
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - app-storage:/app/storage
+    command: ["dumb-init", "npm", "run", "dev"]
+
+  # Testing services
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: development
+    depends_on:
+      - postgres-test
+      - redis
+    environment:
+      - NODE_ENV=test
+      - DATABASE_URL=postgresql://plataforma:plataforma_password@postgres-test:5432/plataforma_test
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=test-jwt-secret
+    networks:
+      - plataforma-network
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: ["dumb-init", "npm", "test"]
+
+  # Test database
+  postgres-test:
+    profiles: ["test"]
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=plataforma_test
+      - POSTGRES_USER=plataforma
+      - POSTGRES_PASSWORD=plataforma_password
+    networks:
+      - plataforma-network
+    tmpfs:
+      - /var/lib/postgresql/data
+
+networks:
+  plataforma-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  app-storage:
+    driver: local

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full Diagnostic - Plataforma White Screen Issue</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 { color: #333; margin-bottom: 10px; }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .status-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .status-card h3 {
+            margin-bottom: 15px;
+            color: #444;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+        .success { color: #10b981; font-weight: bold; }
+        .error { color: #ef4444; font-weight: bold; }
+        .warning { color: #f59e0b; font-weight: bold; }
+        .info { color: #3b82f6; }
+        .log-entry {
+            padding: 5px;
+            margin: 2px 0;
+            background: #f5f5f5;
+            border-left: 3px solid #ccc;
+            font-size: 12px;
+            word-wrap: break-word;
+        }
+        .log-entry.error { border-left-color: #ef4444; background: #fee; }
+        .log-entry.warning { border-left-color: #f59e0b; background: #fef3c7; }
+        .log-entry.info { border-left-color: #3b82f6; background: #eff6ff; }
+        .btn {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+            transition: all 0.3s;
+        }
+        .btn:hover { background: #5a67d8; transform: translateY(-2px); }
+        .btn.danger { background: #ef4444; }
+        .btn.success { background: #10b981; }
+        #console-output {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        .metric { 
+            display: inline-block; 
+            padding: 5px 10px; 
+            margin: 5px;
+            background: #e5e7eb; 
+            border-radius: 20px;
+        }
+        .loading {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Full System Diagnostic</h1>
+            <p>Comprehensive analysis of white screen issue</p>
+            <div id="quick-status"></div>
+        </div>
+
+        <div class="status-grid">
+            <!-- Server Status -->
+            <div class="status-card">
+                <h3>🖥️ Server Status</h3>
+                <div id="server-status" class="loading">Checking...</div>
+            </div>
+
+            <!-- React Status -->
+            <div class="status-card">
+                <h3>⚛️ React Application</h3>
+                <div id="react-status" class="loading">Checking...</div>
+            </div>
+
+            <!-- Network Requests -->
+            <div class="status-card">
+                <h3>🌐 Network Analysis</h3>
+                <div id="network-status" class="loading">Analyzing...</div>
+            </div>
+
+            <!-- Module Loading -->
+            <div class="status-card">
+                <h3>📦 Module Loading</h3>
+                <div id="module-status" class="loading">Checking...</div>
+            </div>
+
+            <!-- Browser Info -->
+            <div class="status-card">
+                <h3>🌍 Browser Environment</h3>
+                <div id="browser-info"></div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="status-card">
+                <h3>📊 Performance Metrics</h3>
+                <div id="performance-metrics"></div>
+            </div>
+        </div>
+
+        <!-- Console Output -->
+        <div class="status-card">
+            <h3>📜 Console Output</h3>
+            <div id="console-output"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="status-card">
+            <h3>🛠️ Actions</h3>
+            <button class="btn" onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+            <button class="btn" onclick="testReactMount()">Test React Mount</button>
+            <button class="btn" onclick="checkModules()">Check All Modules</button>
+            <button class="btn danger" onclick="clearAllCaches()">Clear All Caches</button>
+            <button class="btn success" onclick="tryFix()">Attempt Auto-Fix</button>
+            <button class="btn" onclick="exportReport()">Export Report</button>
+        </div>
+    </div>
+
+    <script>
+        const logs = [];
+        const errors = [];
+        let diagnosticData = {};
+
+        // Intercept console methods
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            logToConsole('info', args.join(' '));
+            originalLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            logToConsole('error', args.join(' '));
+            errors.push(args.join(' '));
+            originalError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            logToConsole('warning', args.join(' '));
+            originalWarn.apply(console, args);
+        };
+
+        // Capture global errors
+        window.addEventListener('error', (e) => {
+            const errorMsg = `${e.message} at ${e.filename}:${e.lineno}:${e.colno}`;
+            logToConsole('error', errorMsg);
+            errors.push(errorMsg);
+        });
+
+        window.addEventListener('unhandledrejection', (e) => {
+            logToConsole('error', `Unhandled Promise Rejection: ${e.reason}`);
+            errors.push(`Promise Rejection: ${e.reason}`);
+        });
+
+        function logToConsole(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push({ type, message, timestamp });
+            updateConsoleDisplay();
+        }
+
+        function updateConsoleDisplay() {
+            const output = document.getElementById('console-output');
+            output.innerHTML = logs.slice(-50).map(log => 
+                `<div class="log-entry ${log.type}">[${log.timestamp}] ${log.message}</div>`
+            ).reverse().join('');
+        }
+
+        async function runFullDiagnostic() {
+            logToConsole('info', 'Starting full diagnostic...');
+            
+            // 1. Check Server
+            await checkServer();
+            
+            // 2. Check React
+            await checkReact();
+            
+            // 3. Check Network
+            await checkNetwork();
+            
+            // 4. Check Modules
+            await checkModules();
+            
+            // 5. Browser Info
+            checkBrowserInfo();
+            
+            // 6. Performance
+            checkPerformance();
+            
+            // Update quick status
+            updateQuickStatus();
+        }
+
+        async function checkServer() {
+            const statusEl = document.getElementById('server-status');
+            try {
+                // Check main app
+                const appResponse = await fetch('/');
+                const appText = await appResponse.text();
+                
+                // Check API
+                const apiResponse = await fetch('/api/health').catch(() => null);
+                
+                // Check Vite
+                const viteResponse = await fetch('/@vite/client').catch(() => null);
+                
+                let status = [];
+                
+                if (appResponse.ok) {
+                    status.push('<div class="success">✅ Main app responding</div>');
+                    if (appText.includes('<div id="root">')) {
+                        status.push('<div class="success">✅ Root element present</div>');
+                    } else {
+                        status.push('<div class="error">❌ Root element missing</div>');
+                    }
+                } else {
+                    status.push('<div class="error">❌ Main app not responding</div>');
+                }
+                
+                if (apiResponse && apiResponse.ok) {
+                    status.push('<div class="success">✅ API healthy</div>');
+                } else {
+                    status.push('<div class="warning">⚠️ API not responding</div>');
+                }
+                
+                if (viteResponse && viteResponse.ok) {
+                    status.push('<div class="success">✅ Vite HMR active</div>');
+                } else {
+                    status.push('<div class="warning">⚠️ Vite HMR not active</div>');
+                }
+                
+                statusEl.innerHTML = status.join('');
+                diagnosticData.server = { appOk: appResponse.ok, apiOk: apiResponse?.ok, viteOk: viteResponse?.ok };
+                
+            } catch (e) {
+                statusEl.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                logToConsole('error', `Server check failed: ${e.message}`);
+            }
+        }
+
+        async function checkReact() {
+            const statusEl = document.getElementById('react-status');
+            try {
+                // Check if React files load
+                const mainResponse = await fetch('/client/main.tsx');
+                const mainText = await mainResponse.text();
+                
+                let status = [];
+                
+                if (mainResponse.ok) {
+                    status.push('<div class="success">✅ main.tsx loads</div>');
+                    
+                    if (mainText.includes('ReactDOM') || mainText.includes('createRoot')) {
+                        status.push('<div class="success">✅ ReactDOM found</div>');
+                    } else {
+                        status.push('<div class="error">❌ ReactDOM not found</div>');
+                    }
+                    
+                    if (mainText.includes('App')) {
+                        status.push('<div class="success">✅ App component found</div>');
+                    } else {
+                        status.push('<div class="warning">⚠️ App component not found</div>');
+                    }
+                } else {
+                    status.push('<div class="error">❌ main.tsx not loading</div>');
+                }
+                
+                // Check if React is in window
+                if (window.React) {
+                    status.push('<div class="success">✅ React in window</div>');
+                } else {
+                    status.push('<div class="warning">⚠️ React not in window</div>');
+                }
+                
+                // Check root element
+                const root = document.getElementById('root');
+                if (root) {
+                    if (root.children.length > 0) {
+                        status.push('<div class="success">✅ React mounted</div>');
+                    } else {
+                        status.push('<div class="error">❌ React not mounted (root empty)</div>');
+                    }
+                } else {
+                    status.push('<div class="error">❌ No root element</div>');
+                }
+                
+                statusEl.innerHTML = status.join('');
+                diagnosticData.react = { mainLoads: mainResponse.ok, mounted: root?.children.length > 0 };
+                
+            } catch (e) {
+                statusEl.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                logToConsole('error', `React check failed: ${e.message}`);
+            }
+        }
+
+        async function checkNetwork() {
+            const statusEl = document.getElementById('network-status');
+            try {
+                const resources = performance.getEntriesByType('resource');
+                const failed = resources.filter(r => r.responseStatus >= 400 || r.transferSize === 0);
+                const slow = resources.filter(r => r.duration > 1000);
+                
+                let status = [];
+                
+                status.push(`<div class="info">📊 Total requests: ${resources.length}</div>`);
+                
+                if (failed.length === 0) {
+                    status.push('<div class="success">✅ No failed requests</div>');
+                } else {
+                    status.push(`<div class="error">❌ ${failed.length} failed requests:</div>`);
+                    failed.slice(0, 5).forEach(r => {
+                        status.push(`<div class="error" style="font-size:11px">• ${r.name}</div>`);
+                    });
+                }
+                
+                if (slow.length > 0) {
+                    status.push(`<div class="warning">⚠️ ${slow.length} slow requests (>1s)</div>`);
+                }
+                
+                // Check specific critical files
+                const criticalFiles = [
+                    '/client/main.tsx',
+                    '/client/App.tsx',
+                    '/@vite/client',
+                    '/node_modules/react/index.js'
+                ];
+                
+                for (const file of criticalFiles) {
+                    const resource = resources.find(r => r.name.includes(file));
+                    if (resource) {
+                        if (resource.responseStatus < 400) {
+                            status.push(`<div class="success" style="font-size:11px">✅ ${file}</div>`);
+                        } else {
+                            status.push(`<div class="error" style="font-size:11px">❌ ${file} (${resource.responseStatus})</div>`);
+                        }
+                    }
+                }
+                
+                statusEl.innerHTML = status.join('');
+                diagnosticData.network = { total: resources.length, failed: failed.length, slow: slow.length };
+                
+            } catch (e) {
+                statusEl.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                logToConsole('error', `Network check failed: ${e.message}`);
+            }
+        }
+
+        async function checkModules() {
+            const statusEl = document.getElementById('module-status');
+            try {
+                let status = [];
+                
+                // Check if module resolution works
+                const testImports = [
+                    { path: '/node_modules/react/index.js', name: 'React' },
+                    { path: '/node_modules/react-dom/index.js', name: 'ReactDOM' },
+                    { path: '/node_modules/react-router-dom/index.js', name: 'React Router' },
+                    { path: '/node_modules/lucide-react/dist/esm/index.js', name: 'Lucide Icons' }
+                ];
+                
+                for (const test of testImports) {
+                    try {
+                        const response = await fetch(test.path);
+                        if (response.ok) {
+                            status.push(`<div class="success">✅ ${test.name}</div>`);
+                        } else {
+                            status.push(`<div class="error">❌ ${test.name} (${response.status})</div>`);
+                        }
+                    } catch (e) {
+                        status.push(`<div class="error">❌ ${test.name} (failed to load)</div>`);
+                    }
+                }
+                
+                // Check for module errors in console
+                const moduleErrors = errors.filter(e => 
+                    e.includes('import') || 
+                    e.includes('module') || 
+                    e.includes('resolve') ||
+                    e.includes('virtual:')
+                );
+                
+                if (moduleErrors.length > 0) {
+                    status.push(`<div class="error">❌ Module errors detected:</div>`);
+                    moduleErrors.slice(0, 3).forEach(e => {
+                        status.push(`<div class="error" style="font-size:11px">• ${e.substring(0, 100)}...</div>`);
+                    });
+                }
+                
+                statusEl.innerHTML = status.join('');
+                diagnosticData.modules = { errors: moduleErrors.length };
+                
+            } catch (e) {
+                statusEl.innerHTML = `<div class="error">❌ Error: ${e.message}</div>`;
+                logToConsole('error', `Module check failed: ${e.message}`);
+            }
+        }
+
+        function checkBrowserInfo() {
+            const statusEl = document.getElementById('browser-info');
+            const info = {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookiesEnabled: navigator.cookieEnabled,
+                onLine: navigator.onLine,
+                viewport: `${window.innerWidth}x${window.innerHeight}`,
+                localStorage: typeof(Storage) !== "undefined"
+            };
+            
+            statusEl.innerHTML = Object.entries(info).map(([key, value]) => 
+                `<div class="metric">${key}: ${value}</div>`
+            ).join('');
+            
+            diagnosticData.browser = info;
+        }
+
+        function checkPerformance() {
+            const statusEl = document.getElementById('performance-metrics');
+            const perf = performance.getEntriesByType('navigation')[0];
+            
+            if (perf) {
+                const metrics = {
+                    'DNS Lookup': Math.round(perf.domainLookupEnd - perf.domainLookupStart) + 'ms',
+                    'TCP Connection': Math.round(perf.connectEnd - perf.connectStart) + 'ms',
+                    'Request Time': Math.round(perf.responseStart - perf.requestStart) + 'ms',
+                    'Response Time': Math.round(perf.responseEnd - perf.responseStart) + 'ms',
+                    'DOM Processing': Math.round(perf.domComplete - perf.domInteractive) + 'ms',
+                    'Total Load Time': Math.round(perf.loadEventEnd - perf.fetchStart) + 'ms'
+                };
+                
+                statusEl.innerHTML = Object.entries(metrics).map(([key, value]) => 
+                    `<div class="metric">${key}: ${value}</div>`
+                ).join('');
+                
+                diagnosticData.performance = metrics;
+            }
+        }
+
+        function updateQuickStatus() {
+            const quickStatus = document.getElementById('quick-status');
+            const issues = [];
+            
+            if (errors.length > 0) {
+                issues.push(`<span class="error">❌ ${errors.length} errors detected</span>`);
+            }
+            
+            if (!diagnosticData.react?.mounted) {
+                issues.push('<span class="error">❌ React not mounted</span>');
+            }
+            
+            if (diagnosticData.network?.failed > 0) {
+                issues.push(`<span class="error">❌ ${diagnosticData.network.failed} network failures</span>`);
+            }
+            
+            if (diagnosticData.modules?.errors > 0) {
+                issues.push(`<span class="error">❌ Module loading errors</span>`);
+            }
+            
+            if (issues.length === 0) {
+                quickStatus.innerHTML = '<div class="success">✅ No critical issues detected</div>';
+            } else {
+                quickStatus.innerHTML = '<div class="error">Issues found: ' + issues.join(' | ') + '</div>';
+            }
+        }
+
+        async function testReactMount() {
+            logToConsole('info', 'Testing React mount...');
+            
+            // Try to mount a simple React component
+            const testScript = document.createElement('script');
+            testScript.innerHTML = `
+                console.log('Attempting to mount test React component...');
+                const testRoot = document.createElement('div');
+                testRoot.id = 'test-root';
+                testRoot.style.cssText = 'position:fixed;top:10px;right:10px;background:white;padding:10px;border:2px solid green;z-index:9999';
+                document.body.appendChild(testRoot);
+                
+                // Try to create a simple element
+                testRoot.innerHTML = '<div style="color:green">✅ Test element mounted</div>';
+                
+                setTimeout(() => {
+                    if (testRoot.parentNode) {
+                        testRoot.remove();
+                    }
+                }, 3000);
+            `;
+            document.body.appendChild(testScript);
+        }
+
+        function clearAllCaches() {
+            logToConsole('info', 'Clearing all caches...');
+            
+            // Clear localStorage
+            localStorage.clear();
+            logToConsole('info', 'localStorage cleared');
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            logToConsole('info', 'sessionStorage cleared');
+            
+            // Clear service worker caches
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                        logToConsole('info', `Cache "${name}" deleted`);
+                    });
+                });
+            }
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            alert('All caches cleared! Please refresh the page.');
+        }
+
+        async function tryFix() {
+            logToConsole('info', 'Attempting auto-fix...');
+            
+            // 1. Clear caches
+            clearAllCaches();
+            
+            // 2. Try to reload with cache bypass
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1000);
+        }
+
+        function exportReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                diagnosticData,
+                errors,
+                logs: logs.slice(-100),
+                userAgent: navigator.userAgent,
+                url: window.location.href
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `diagnostic-report-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Run diagnostic on load
+        window.addEventListener('load', () => {
+            setTimeout(runFullDiagnostic, 500);
+        });
+    </script>
+</body>
+</html>

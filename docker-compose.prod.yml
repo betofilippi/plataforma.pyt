@@ -1,0 +1,519 @@
+version: '3.8'
+
+services:
+  # Load Balancer (Nginx with SSL termination)
+  loadbalancer:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/production.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - ./docker/nginx/sites:/etc/nginx/sites-enabled:ro
+    depends_on:
+      - frontend-1
+      - frontend-2
+    networks:
+      - plataforma-network
+      - external
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Multiple instances for HA)
+  frontend-1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: nginx
+    expose:
+      - "8080"
+    depends_on:
+      - backend-1
+      - backend-2
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://loadbalancer
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  frontend-2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: nginx
+    expose:
+      - "8080"
+    depends_on:
+      - backend-1
+      - backend-2
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://loadbalancer
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Backend (Multiple instances for HA)
+  backend-1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    expose:
+      - "4000"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      redis-primary:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://plataforma:${POSTGRES_PASSWORD}@postgres-primary:5432/plataforma
+      - DATABASE_READ_URL=postgresql://plataforma:${POSTGRES_PASSWORD}@postgres-replica:5432/plataforma
+      - REDIS_URL=redis://redis-primary:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - DEMO_MODE=false
+      - SECURITY_AUDIT_ENABLED=true
+      - SECURITY_CSP_ENABLED=true
+      - SECURITY_RBAC_ENABLED=true
+      - RATE_LIMIT_ENABLED=true
+      - LOG_LEVEL=info
+      - INSTANCE_ID=backend-1
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - app-storage:/app/storage
+      - app-logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend-2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+    expose:
+      - "4000"
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      redis-primary:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://plataforma:${POSTGRES_PASSWORD}@postgres-primary:5432/plataforma
+      - DATABASE_READ_URL=postgresql://plataforma:${POSTGRES_PASSWORD}@postgres-replica:5432/plataforma
+      - REDIS_URL=redis://redis-primary:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - DEMO_MODE=false
+      - SECURITY_AUDIT_ENABLED=true
+      - SECURITY_CSP_ENABLED=true
+      - SECURITY_RBAC_ENABLED=true
+      - RATE_LIMIT_ENABLED=true
+      - LOG_LEVEL=info
+      - INSTANCE_ID=backend-2
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - app-storage:/app/storage
+      - app-logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Primary (Write operations)
+  postgres-primary:
+    image: postgres:15-alpine
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_DB=plataforma
+      - POSTGRES_USER=plataforma
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_REPLICATION_MODE=master
+      - POSTGRES_REPLICATION_USER=replicator
+      - POSTGRES_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plataforma -d plataforma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./database/backups:/backups
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # PostgreSQL Replica (Read operations)
+  postgres-replica:
+    image: postgres:15-alpine
+    expose:
+      - "5432"
+    environment:
+      - POSTGRES_MASTER_SERVICE=postgres-primary
+      - POSTGRES_REPLICATION_MODE=slave
+      - POSTGRES_REPLICATION_USER=replicator
+      - POSTGRES_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+      - POSTGRES_MASTER_PORT_NUMBER=5432
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Redis Primary (Master)
+  redis-primary:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    command: >
+      redis-server 
+      --appendonly yes 
+      --maxmemory 2gb 
+      --maxmemory-policy allkeys-lru 
+      --save 900 1 
+      --save 300 10 
+      --save 60 10000
+      --requirepass ${REDIS_PASSWORD}
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    volumes:
+      - redis-primary-data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Redis Sentinel (High Availability)
+  redis-sentinel:
+    image: redis:7-alpine
+    command: >
+      redis-sentinel /etc/redis/sentinel.conf
+      --sentinel deny-scripts-reconfig no
+    depends_on:
+      - redis-primary
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    volumes:
+      - ./docker/redis/sentinel.conf:/etc/redis/sentinel.conf:ro
+
+  # Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - plataforma-network
+      - monitoring
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+    networks:
+      - plataforma-network
+      - monitoring
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Logging - Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    networks:
+      - plataforma-network
+      - logging
+    restart: unless-stopped
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Logging - Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    depends_on:
+      - elasticsearch
+    networks:
+      - plataforma-network
+      - logging
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Logging - Filebeat
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    user: root
+    command: filebeat -e -strict.perms=false
+    environment:
+      - setup.kibana.host=kibana:5601
+      - output.elasticsearch.hosts=["elasticsearch:9200"]
+    depends_on:
+      - elasticsearch
+      - kibana
+    networks:
+      - plataforma-network
+      - logging
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - app-logs:/app/logs:ro
+
+  # Security - NGINX WAF
+  waf:
+    image: owasp/modsecurity-crs:nginx
+    ports:
+      - "8443:443"
+      - "8080:80"
+    environment:
+      - PARANOIA=1
+      - ANOMALY_INBOUND=5
+      - ANOMALY_OUTBOUND=4
+      - BACKEND=http://loadbalancer
+    networks:
+      - external
+      - plataforma-network
+    restart: unless-stopped
+    volumes:
+      - ./docker/modsecurity/custom-rules:/etc/modsecurity.d/custom-rules:ro
+
+  # Backup Service
+  backup:
+    image: postgres:15-alpine
+    command: |
+      sh -c '
+        while true; do
+          echo "Starting backup at $$(date)"
+          pg_dump -h postgres-primary -U plataforma -d plataforma > /backups/plataforma_$$(date +%Y%m%d_%H%M%S).sql
+          # Keep only last 7 days of backups
+          find /backups -name "plataforma_*.sql" -mtime +7 -delete
+          echo "Backup completed at $$(date)"
+          sleep 86400  # 24 hours
+        done
+      '
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      - postgres-primary
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    volumes:
+      - ./database/backups:/backups
+      - backup-logs:/var/log
+
+networks:
+  plataforma-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  external:
+    driver: bridge
+  monitoring:
+    driver: bridge
+  logging:
+    driver: bridge
+
+volumes:
+  postgres-primary-data:
+    driver: local
+  postgres-replica-data:
+    driver: local
+  redis-primary-data:
+    driver: local
+  app-storage:
+    driver: local
+  app-logs:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  elasticsearch-data:
+    driver: local
+  backup-logs:
+    driver: local
+
+# Production environment file template
+# Create .env.prod with these variables:
+# POSTGRES_PASSWORD=your_secure_postgres_password
+# POSTGRES_REPLICATION_PASSWORD=your_replication_password
+# REDIS_PASSWORD=your_secure_redis_password
+# JWT_SECRET=your_very_secure_jwt_secret_key
+# GRAFANA_PASSWORD=your_grafana_password
+# GRAFANA_USER=admin

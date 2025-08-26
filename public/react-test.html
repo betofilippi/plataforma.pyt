@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Mount Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+        }
+        .status-line {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #333;
+            padding-left: 15px;
+        }
+        .success { border-color: #00ff00; color: #00ff00; }
+        .error { border-color: #ff0000; color: #ff0000; }
+        .warning { border-color: #ffaa00; color: #ffaa00; }
+        .info { border-color: #0088ff; color: #0088ff; }
+        button {
+            background: #1a1a1a;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #00ff00;
+            color: #0a0a0a;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 React Mount Test - plataforma.dev</h1>
+    <button onclick="testReactMount()">▶ Test React Mount</button>
+    <button onclick="window.open('http://localhost:3030', '_blank')">🌐 Open App</button>
+    <button onclick="location.reload()">🔄 Refresh</button>
+    <hr>
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const line = document.createElement('div');
+            line.className = `status-line ${type}`;
+            line.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(line);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        async function testReactMount() {
+            document.getElementById('results').innerHTML = '';
+            log('🔍 Starting React mount test...', 'info');
+
+            try {
+                // Test 1: Check if app page loads
+                log('📄 Fetching main app page...', 'info');
+                const response = await fetch('http://localhost:3030/');
+                
+                if (!response.ok) {
+                    log(`❌ Failed to fetch app: ${response.status} ${response.statusText}`, 'error');
+                    return;
+                }
+                
+                const html = await response.text();
+                log(`✅ App page loaded (${html.length} bytes)`, 'success');
+
+                // Test 2: Check for root element
+                if (html.includes('<div id="root"></div>')) {
+                    log('✅ Root element found in HTML', 'success');
+                } else {
+                    log('❌ Root element NOT found in HTML', 'error');
+                }
+
+                // Test 3: Check for main.tsx script
+                if (html.includes('/client/main.tsx')) {
+                    log('✅ Main.tsx script reference found', 'success');
+                } else {
+                    log('❌ Main.tsx script reference NOT found', 'error');
+                }
+
+                // Test 4: Test React script directly
+                log('⚛️ Testing React script loading...', 'info');
+                const scriptResponse = await fetch('http://localhost:3030/client/main.tsx');
+                
+                if (scriptResponse.ok) {
+                    log(`✅ React script accessible: ${scriptResponse.status}`, 'success');
+                    const scriptContent = await scriptResponse.text();
+                    
+                    // Check for key React imports
+                    if (scriptContent.includes('createRoot')) {
+                        log('✅ React 18 createRoot found', 'success');
+                    } else {
+                        log('⚠️ React createRoot not found', 'warning');
+                    }
+
+                    if (scriptContent.includes('App')) {
+                        log('✅ App component import found', 'success');
+                    } else {
+                        log('❌ App component import NOT found', 'error');
+                    }
+
+                    // Check for module federation issues
+                    if (scriptContent.includes('virtual:shared-')) {
+                        log('❌ Module federation corruption detected!', 'error');
+                        log('Fix: Remove module federation plugin from vite.config.ts', 'warning');
+                    } else {
+                        log('✅ No module federation corruption detected', 'success');
+                    }
+                } else {
+                    log(`❌ React script NOT accessible: ${scriptResponse.status}`, 'error');
+                }
+
+                // Test 5: Check API endpoint
+                log('🔌 Testing API endpoint...', 'info');
+                try {
+                    const apiResponse = await fetch('http://localhost:3030/api/health');
+                    if (apiResponse.ok) {
+                        log(`✅ API endpoint accessible: ${apiResponse.status}`, 'success');
+                    } else {
+                        log(`⚠️ API returned ${apiResponse.status}`, 'warning');
+                    }
+                } catch (apiError) {
+                    log(`⚠️ API not responding (backend may be down)`, 'warning');
+                }
+
+                // Test 6: Open app in iframe to check if it renders
+                log('🖼️ Testing app rendering in iframe...', 'info');
+                const iframe = document.createElement('iframe');
+                iframe.src = 'http://localhost:3030';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const rootElement = iframeDoc.getElementById('root');
+                    
+                    if (rootElement && rootElement.children.length > 0) {
+                        log('✅ React app is MOUNTED and RENDERING!', 'success');
+                        log(`Root element has ${rootElement.children.length} children`, 'success');
+                    } else {
+                        log('❌ React app NOT mounting (root is empty)', 'error');
+                    }
+                } catch (e) {
+                    log('⚠️ Cannot access iframe content (CORS)', 'warning');
+                }
+
+                document.body.removeChild(iframe);
+                
+                log('✨ Test complete!', 'success');
+                
+            } catch (error) {
+                log(`❌ Test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run test on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testReactMount, 500);
+        });
+    </script>
+</body>
+</html>

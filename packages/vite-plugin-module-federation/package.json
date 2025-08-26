@@ -1,0 +1,46 @@
+{
+  "name": "@plataforma/vite-plugin-module-federation",
+  "version": "1.0.0",
+  "description": "Vite plugin for Module Federation in plataforma.app OS",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "vite",
+    "plugin",
+    "module-federation",
+    "plataforma-app",
+    "micro-frontends"
+  ],
+  "author": "plataforma.app",
+  "license": "MIT",
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "dependencies": {
+    "es-module-lexer": "^1.4.1",
+    "magic-string": "^0.30.5",
+    "pathe": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.5.3"
+  }
+}

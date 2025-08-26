@@ -1,0 +1,384 @@
+name: Publish Packages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'packages/**'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish (leave empty for all changed)'
+        required: false
+        type: string
+      version-type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+      prerelease-tag:
+        description: 'Prerelease tag (for prerelease only)'
+        required: false
+        default: 'alpha'
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  NPM_REGISTRY: 'https://registry.npmjs.org'
+
+jobs:
+  detect-changes:
+    name: Detect Package Changes
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.changes.outputs.packages }}
+      changed-packages: ${{ steps.detect.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            packages:
+              - 'packages/**'
+
+      - name: Detect changed packages
+        id: detect
+        if: steps.changes.outputs.packages == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.package }}" ]; then
+            echo "packages=[\"${{ inputs.package }}\"]" >> $GITHUB_OUTPUT
+          else
+            changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+            packages=$(echo "$changed_files" | grep -E '^packages/[^/]+' | cut -d'/' -f2 | sort | uniq | jq -R -s -c 'split("\n")[:-1]')
+            echo "packages=$packages" >> $GITHUB_OUTPUT
+          fi
+
+  validate:
+    name: Validate Packages
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.packages == 'true'
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.changed-packages) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Validate package structure
+        run: |
+          cd packages/${{ matrix.package }}
+          
+          # Check required files
+          if [ ! -f "package.json" ]; then
+            echo "❌ Missing package.json"
+            exit 1
+          fi
+          
+          if [ ! -f "README.md" ]; then
+            echo "❌ Missing README.md"
+            exit 1
+          fi
+          
+          if [ ! -f "tsconfig.json" ]; then
+            echo "❌ Missing tsconfig.json"
+            exit 1
+          fi
+          
+          # Check package.json fields
+          if ! jq -e '.name' package.json > /dev/null; then
+            echo "❌ Missing package name"
+            exit 1
+          fi
+          
+          if ! jq -e '.version' package.json > /dev/null; then
+            echo "❌ Missing package version"
+            exit 1
+          fi
+          
+          if ! jq -e '.main' package.json > /dev/null; then
+            echo "❌ Missing main entry point"
+            exit 1
+          fi
+
+      - name: Build package
+        run: |
+          cd packages/${{ matrix.package }}
+          if [ -f "package.json" ] && [ "$(jq -r '.scripts.build // empty' package.json)" != "" ]; then
+            npm run build
+          else
+            echo "No build script for ${{ matrix.package }}"
+          fi
+
+      - name: Test package
+        run: |
+          cd packages/${{ matrix.package }}
+          if [ -f "package.json" ] && [ "$(jq -r '.scripts.test // empty' package.json)" != "" ]; then
+            npm test
+          else
+            echo "No test script for ${{ matrix.package }}"
+          fi
+
+      - name: Lint package
+        run: |
+          cd packages/${{ matrix.package }}
+          if [ -f "package.json" ] && [ "$(jq -r '.scripts.lint // empty' package.json)" != "" ]; then
+            npm run lint
+          else
+            echo "No lint script for ${{ matrix.package }}"
+          fi
+
+  version:
+    name: Version Packages
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate]
+    if: needs.detect-changes.outputs.packages == 'true' && github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.changed-packages) }}
+    outputs:
+      versions: ${{ steps.version.outputs.versions }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Configure git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Version package
+        id: version
+        run: |
+          cd packages/${{ matrix.package }}
+          
+          # Get current version
+          current_version=$(jq -r '.version' package.json)
+          
+          # Determine version bump
+          case "${{ inputs.version-type }}" in
+            "patch")
+              new_version=$(npm version patch --no-git-tag-version)
+              ;;
+            "minor")
+              new_version=$(npm version minor --no-git-tag-version)
+              ;;
+            "major")
+              new_version=$(npm version major --no-git-tag-version)
+              ;;
+            "prerelease")
+              new_version=$(npm version prerelease --preid=${{ inputs.prerelease-tag }} --no-git-tag-version)
+              ;;
+          esac
+          
+          # Clean version string (remove 'v' prefix)
+          new_version=$(echo $new_version | sed 's/^v//')
+          
+          echo "package=${{ matrix.package }}" >> $GITHUB_OUTPUT
+          echo "old_version=$current_version" >> $GITHUB_OUTPUT
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          
+          # Update package.json
+          jq --arg version "$new_version" '.version = $version' package.json > tmp.json
+          mv tmp.json package.json
+
+      - name: Update lockfile
+        run: npm install --package-lock-only
+
+      - name: Commit version bump
+        run: |
+          git add packages/${{ matrix.package }}/package.json package-lock.json
+          git commit -m "chore: bump ${{ matrix.package }} from ${{ steps.version.outputs.old_version }} to ${{ steps.version.outputs.new_version }}"
+          git push
+
+      - name: Create tag
+        run: |
+          tag="${{ matrix.package }}-v${{ steps.version.outputs.new_version }}"
+          git tag $tag
+          git push origin $tag
+
+  publish:
+    name: Publish Packages
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate, version]
+    if: needs.detect-changes.outputs.packages == 'true'
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.detect-changes.outputs.changed-packages) }}
+    environment:
+      name: npm-publish
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: ${{ env.NPM_REGISTRY }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Build package
+        run: |
+          cd packages/${{ matrix.package }}
+          if [ -f "package.json" ] && [ "$(jq -r '.scripts.build // empty' package.json)" != "" ]; then
+            npm run build
+          fi
+
+      - name: Check if version exists
+        id: check
+        run: |
+          cd packages/${{ matrix.package }}
+          package_name=$(jq -r '.name' package.json)
+          version=$(jq -r '.version' package.json)
+          
+          if npm view "$package_name@$version" version 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️ Version $version of $package_name already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Version $version of $package_name is new"
+          fi
+
+      - name: Publish package
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          cd packages/${{ matrix.package }}
+          
+          # Determine publish tag
+          version=$(jq -r '.version' package.json)
+          if [[ "$version" == *"alpha"* ]] || [[ "$version" == *"beta"* ]] || [[ "$version" == *"rc"* ]]; then
+            publish_tag="next"
+          else
+            publish_tag="latest"
+          fi
+          
+          npm publish --tag $publish_tag --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ matrix.package }}-v${{ steps.version.outputs.new_version }}
+          release_name: ${{ matrix.package }} v${{ steps.version.outputs.new_version }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.new_version, 'alpha') || contains(steps.version.outputs.new_version, 'beta') }}
+          body: |
+            ## Changes in ${{ matrix.package }} v${{ steps.version.outputs.new_version }}
+            
+            This release was automatically generated from the monorepo.
+            
+            **Package**: `${{ matrix.package }}`
+            **Version**: `${{ steps.version.outputs.new_version }}`
+            **Type**: `${{ inputs.version-type }}`
+            
+            ### Installation
+            ```bash
+            npm install @plataforma/${{ matrix.package }}@${{ steps.version.outputs.new_version }}
+            ```
+
+  update-docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: [publish]
+    if: always() && needs.publish.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Update package registry
+        run: |
+          # Generate updated package list
+          packages_json="[]"
+          for package_dir in packages/*/; do
+            if [ -f "$package_dir/package.json" ]; then
+              package_name=$(basename "$package_dir")
+              version=$(jq -r '.version' "$package_dir/package.json")
+              description=$(jq -r '.description // ""' "$package_dir/package.json")
+              
+              package_info=$(jq -n \
+                --arg name "$package_name" \
+                --arg version "$version" \
+                --arg description "$description" \
+                '{name: $name, version: $version, description: $description}')
+              
+              packages_json=$(echo "$packages_json" | jq ". + [$package_info]")
+            fi
+          done
+          
+          echo "$packages_json" > docs/packages.json
+
+      - name: Commit documentation updates
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/packages.json
+          if git diff --staged --quiet; then
+            echo "No documentation changes to commit"
+          else
+            git commit -m "docs: update package registry"
+            git push
+          fi
+
+  notify:
+    name: Notify Publication
+    runs-on: ubuntu-latest
+    needs: [publish, update-docs]
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.publish.result == 'success'
+        run: |
+          echo "🎉 Successfully published packages"
+          # Add notification logic here
+
+      - name: Notify failure
+        if: needs.publish.result == 'failure'
+        run: |
+          echo "❌ Package publication failed"
+          # Add failure notification here

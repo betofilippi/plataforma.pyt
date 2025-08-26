@@ -2,6 +2,8 @@ import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { createServer } from "./server";
+// Temporarily disabled - causing import corruption
+// import { moduleFederation, createPlataformaModuleFederation } from "./packages/vite-plugin-module-federation/dist/index.mjs";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -59,7 +61,30 @@ export default defineConfig(({ mode }) => ({
       include: "**/*.{jsx,tsx}",
       // Fast Refresh configuration
       fastRefresh: true,
-    }), 
+    }),
+    // Module Federation Plugin temporarily disabled - was corrupting imports
+    // moduleFederation(
+    //   createPlataformaModuleFederation({
+    //     name: 'plataforma-host',
+    //     // Host application - can load remote modules dynamically
+    //     remotes: {
+    //       // Example remote modules (can be registered at runtime)
+    //       // 'auth-module': 'http://localhost:3001/remote-entry.js',
+    //       // 'dashboard-module': 'http://localhost:3002/remote-entry.js'
+    //     },
+    //     shared: {
+    //       // Additional shared dependencies specific to plataforma
+    //       '@mui/material': {
+    //         singleton: true,
+    //         requiredVersion: '^7.0.0'
+    //       },
+    //       '@mui/icons-material': {
+    //         singleton: false, // Allow multiple versions due to size
+    //         requiredVersion: '^5.0.0'
+    //       }
+    //     }
+    //   })
+    // ),
     expressPlugin()
   ],
   // Otimizações de dependências com exclusões para resolver EBUSY
@@ -103,7 +128,8 @@ export default defineConfig(({ mode }) => ({
     alias: [
       { find: "@/modulos", replacement: path.resolve(__dirname, "./modulos") },
       { find: "@/shared", replacement: path.resolve(__dirname, "./shared") },
-      { find: "@", replacement: path.resolve(__dirname, "./client") }
+      { find: "@", replacement: path.resolve(__dirname, "./client") },
+      { find: "@plataforma/vite-plugin-module-federation", replacement: path.resolve(__dirname, "./packages/vite-plugin-module-federation/src") }
     ],
   },
 }));

@@ -1,0 +1,205 @@
+import React, { useState, useEffect } from 'react';
+import { WindowCard, WindowButton, WindowInput } from '@plataforma/design-system';
+import { useAuth } from '@plataforma/auth-system';
+import { Database, Plus, Edit, Trash2, RefreshCw, Search } from 'lucide-react';
+import { useModuleData } from '../hooks/useModuleData';
+import { DataTable } from './DataTable';
+import { DataForm } from './DataForm';
+import type { ModuleComponentProps, DataItem } from '../types';
+
+/**
+ * Componente principal do módulo {{displayName}} com banco de dados
+ */
+export function ModuleComponent({ onClose }: ModuleComponentProps) {
+  const { user } = useAuth();
+  const {
+    data,
+    isLoading,
+    error,
+    createItem,
+    updateItem,
+    deleteItem,
+    refreshData
+  } = useModuleData();
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingItem, setEditingItem] = useState<DataItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Filtrar dados baseado na busca
+  const filteredData = data?.filter(item =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  const handleCreate = () => {
+    setEditingItem(null);
+    setShowForm(true);
+  };
+
+  const handleEdit = (item: DataItem) => {
+    setEditingItem(item);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (item: DataItem) => {
+    if (window.confirm(`Tem certeza que deseja excluir "${item.name}"?`)) {
+      try {
+        await deleteItem(item.id);
+      } catch (error) {
+        console.error('Erro ao excluir item:', error);
+        alert('Erro ao excluir item. Tente novamente.');
+      }
+    }
+  };
+
+  const handleFormSubmit = async (formData: Partial<DataItem>) => {
+    try {
+      if (editingItem) {
+        await updateItem(editingItem.id, formData);
+      } else {
+        await createItem(formData);
+      }
+      setShowForm(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Erro ao salvar item:', error);
+      alert('Erro ao salvar item. Tente novamente.');
+    }
+  };
+
+  const handleFormCancel = () => {
+    setShowForm(false);
+    setEditingItem(null);
+  };
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+            <Database className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-white">{{displayName}}</h1>
+            <p className="text-sm text-gray-400">{{description}}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <WindowButton
+            variant="secondary"
+            size="sm"
+            icon={<RefreshCw />}
+            onClick={refreshData}
+            disabled={isLoading}
+            tooltip="Atualizar dados"
+          >
+            Atualizar
+          </WindowButton>
+          
+          <WindowButton
+            variant="primary"
+            size="sm"
+            icon={<Plus />}
+            onClick={handleCreate}
+            tooltip="Adicionar novo item"
+          >
+            Novo
+          </WindowButton>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 p-4 space-y-4 overflow-hidden">
+        {/* Connection Status */}
+        {user && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <p className="text-sm text-emerald-300">
+              🗄️ Conectado ao banco de dados como: <span className="font-medium">{user.email}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <p className="text-sm text-red-300">
+              ❌ Erro: {error}
+            </p>
+          </div>
+        )}
+
+        {/* Search Bar */}
+        <WindowCard>
+          <div className="flex items-center gap-2">
+            <Search className="w-4 h-4 text-gray-400" />
+            <WindowInput
+              placeholder="Buscar por nome ou descrição..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+        </WindowCard>
+
+        {/* Data Table */}
+        <WindowCard title={`Dados (${filteredData.length} itens)`} className="flex-1 overflow-hidden">
+          <DataTable
+            data={filteredData}
+            isLoading={isLoading}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            emptyMessage={
+              searchTerm 
+                ? "Nenhum item encontrado para a busca atual"
+                : "Nenhum dado encontrado. Clique em 'Novo' para adicionar o primeiro item."
+            }
+          />
+        </WindowCard>
+
+        {/* Form Modal */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="w-full max-w-md">
+              <WindowCard 
+                title={editingItem ? 'Editar Item' : 'Novo Item'}
+                className="border-2 border-white/20"
+              >
+                <DataForm
+                  initialData={editingItem}
+                  onSubmit={handleFormSubmit}
+                  onCancel={handleFormCancel}
+                  isLoading={isLoading}
+                />
+              </WindowCard>
+            </div>
+          </div>
+        )}
+
+        {/* Stats Card */}
+        {data && data.length > 0 && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <p className="text-2xl font-bold text-blue-300">{data.length}</p>
+              <p className="text-sm text-gray-400">Total de Itens</p>
+            </div>
+            <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <p className="text-2xl font-bold text-emerald-300">
+                {data.filter(item => item.status === 'active').length}
+              </p>
+              <p className="text-sm text-gray-400">Itens Ativos</p>
+            </div>
+            <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <p className="text-2xl font-bold text-yellow-300">
+                {data.filter(item => item.status === 'inactive').length}
+              </p>
+              <p className="text-sm text-gray-400">Itens Inativos</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

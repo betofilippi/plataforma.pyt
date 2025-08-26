@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["../../../client/*"],
+      "@/components/*": ["../../../client/components/*"],
+      "@/lib/*": ["../../../client/lib/*"],
+      "@/hooks/*": ["../../../client/hooks/*"],
+      "@/contexts/*": ["../../../client/contexts/*"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "references": []
+}

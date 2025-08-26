@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Database as DatabaseIcon,
   Settings as SistemaIcon,
+  Store as MarketplaceIcon,
   Folder as FolderIcon,
   FileText as DocumentsIcon,
   Table as TableIcon,
@@ -112,6 +113,14 @@ function PlatformDashboardContent() {
       color: getModuleColor('sistema').gradient,
       href: "/sistema",
       position: { x: 250, y: 150 },
+    },
+    {
+      id: "marketplace",
+      name: "MARKETPLACE", 
+      icon: MarketplaceIcon,
+      color: getModuleColor('marketplace').gradient,
+      href: "/marketplace",
+      position: { x: 430, y: 150 },
     },
   ];
 

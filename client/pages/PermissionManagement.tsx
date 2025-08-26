@@ -7,9 +7,9 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { usePermissions } from '../contexts/PermissionContext';
 import { useToast } from '../components/ui/use-toast';
-import PermissionMatrix from '../components/rbac/PermissionMatrix';
-import RoleSelector from '../components/rbac/RoleSelector';
-import { AdminOnly } from '../components/rbac/PermissionGate';
+// import PermissionMatrix from '../components/rbac/PermissionMatrix';
+// import RoleSelector from '../components/rbac/RoleSelector';
+// import { AdminOnly } from '../components/rbac/PermissionGate';
 
 interface User {
   id: string;
@@ -291,13 +291,13 @@ export const PermissionManagement: React.FC = () => {
                   </Card>
 
                   {/* Role Management */}
-                  <RoleSelector
+                  {/* <RoleSelector
                     userId={selectedUser.id}
                     onRolesChanged={() => {
                       // Refresh user data or update local state
                       loadUsers();
                     }}
-                  />
+                  /> */}
                 </div>
               ) : (
                 <Card>
@@ -313,7 +313,7 @@ export const PermissionManagement: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="matrix">
-          <PermissionMatrix />
+          {/* <PermissionMatrix /> */}
         </TabsContent>
 
         <TabsContent value="roles">
