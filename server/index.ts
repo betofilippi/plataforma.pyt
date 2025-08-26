@@ -102,8 +102,6 @@ import {
   initializeAllBuckets
 } from './routes/module-storage';
 import importControlRoutes from './routes/import-control';
-// import whatsappWebhookRoutes from './routes/whatsapp-webhook'; // Old WhatsApp Business API
-import zApiWebhookRoutes from './routes/z-api-webhook'; // New Z-API integration
 
 export function createServer() {
   const app = express();
@@ -272,7 +270,6 @@ export function createServer() {
   app.use("/api/import", importControlRoutes);
 
   // === Z-API WHATSAPP ROUTES (Replacing WhatsApp Business API) ===
-  app.use("/api/whatsapp", zApiWebhookRoutes);
 
   // === CLAUDE SESSIONS ROUTES ===
   app.get("/sessions", (req, res) => {
