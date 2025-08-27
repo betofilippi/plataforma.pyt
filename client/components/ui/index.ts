@@ -4,6 +4,7 @@ export { WindowButton } from './WindowButton';
 export { WindowInput, WindowTextarea, WindowSelect } from './WindowInput';
 export { WindowToggle } from './WindowToggle';
 export { CurrentUserAvatar } from './CurrentUserAvatar';
+export { NotificationBadge } from './NotificationBadge';
 export { ContextMenu, useContextMenu, getStandardModuleContextOptions } from './ContextMenu';
 
 // Re-export design system utilities

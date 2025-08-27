@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getModuleColor } from "@/lib/module-colors";
 import { CurrentUserAvatar } from "@/components/ui/CurrentUserAvatar";
+import { NotificationBadge } from "@/components/ui/NotificationBadge";
 import {
   Monitor,
   FileSpreadsheet,
@@ -114,15 +115,11 @@ export function WindowTaskbar() {
         <div className="flex items-center space-x-2 mr-2">
 
           {/* Notifications */}
-          <button
-            onClick={() => navigate("/notifications")}
-            className="p-2 hover:bg-gray-700/30 rounded-lg transition-all duration-200 relative group"
-            title="Notificações"
-          >
-            <Bell className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-            {/* Notification badge */}
-            <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-          </button>
+          <NotificationBadge 
+            onNotificationClick={() => navigate("/notifications")}
+            showPreview={true}
+            maxPreviewItems={5}
+          />
 
           {/* Separator */}
           <div className="w-px h-8 bg-gray-600/50"></div>

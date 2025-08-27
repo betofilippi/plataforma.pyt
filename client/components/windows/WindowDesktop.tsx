@@ -1,7 +1,7 @@
 import React from "react";
 import { Window } from "./Window";
 import { useWindowManager } from "./WindowManager";
-import { WindowTaskbar } from "./WindowTaskbar";
+import { OSAdvancedTaskbar } from "./OSAdvancedTaskbar";
 
 interface WindowDesktopProps {
   children?: React.ReactNode;
@@ -37,8 +37,8 @@ export function WindowDesktop({
         <Window key={window.id} window={window} />
       ))}
 
-      {/* Taskbar */}
-      {showTaskbar && <WindowTaskbar />}
+      {/* Advanced OS-style Taskbar */}
+      {showTaskbar && <OSAdvancedTaskbar />}
 
       {/* Desktop Context Menu (Future Enhancement) */}
       {!disableContextMenu && <DesktopContextMenu />}

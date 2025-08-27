@@ -102,6 +102,8 @@ import {
   initializeAllBuckets
 } from './routes/module-storage';
 import importControlRoutes from './routes/import-control';
+import { createNotificationRoutes } from './routes/notifications';
+import { NotificationService } from './services/NotificationService';
 
 export function createServer() {
   const app = express();
@@ -218,6 +220,9 @@ export function createServer() {
 
   // === SETTINGS ROUTES ===
   app.use("/api/settings", createSettingsRoutes(dbPool));
+
+  // Initialize NotificationService (will be configured with RealtimeServer later)
+  let notificationService: NotificationService | null = null;
 
   // === DATABASE ROUTES REMOVED ===  
   // Using Supabase Platform Kit directly - no custom endpoints needed
@@ -542,7 +547,14 @@ export function createServer() {
       
       try {
         server.realtimeServer = new RealtimeServer(httpServer);
-        console.log('✅ WebSocket server initialized successfully');
+        
+        // Initialize NotificationService with RealtimeServer
+        notificationService = new NotificationService(dbPool as any, redis, server.realtimeServer);
+        
+        // Add notification routes
+        app.use("/api/notifications", createNotificationRoutes(notificationService, dbPool));
+        
+        console.log('✅ WebSocket server and NotificationService initialized successfully');
       } catch (error) {
         console.error('❌ Failed to initialize WebSocket server:', error);
       }
@@ -550,6 +562,9 @@ export function createServer() {
     
     // Get realtime server instance
     getRealtimeServer: () => server.realtimeServer,
+    
+    // Get notification service instance
+    getNotificationService: () => notificationService,
     
     close: async () => {
       console.log('🔄 Shutting down server...');

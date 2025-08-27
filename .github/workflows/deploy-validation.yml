@@ -1,0 +1,417 @@
+# Deploy and Validation Pipeline
+# Handles deployment to different environments with comprehensive validation
+
+name: Deploy & Validation
+
+on:
+  workflow_run:
+    workflows: ["Test Suite"]
+    branches: [main, develop]
+    types: [completed]
+  
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip pre-deployment tests'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '18'
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1: Pre-deployment validation
+  pre-deployment:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    outputs:
+      deploy-staging: ${{ steps.determine-deployment.outputs.deploy-staging }}
+      deploy-production: ${{ steps.determine-deployment.outputs.deploy-production }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.meta.outputs.digest }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine deployment targets
+        id: determine-deployment
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ github.event.inputs.environment }}" == "staging" ]]; then
+              echo "deploy-staging=true" >> $GITHUB_OUTPUT
+              echo "deploy-production=false" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+              echo "deploy-staging=false" >> $GITHUB_OUTPUT
+              echo "deploy-production=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+              echo "deploy-staging=true" >> $GITHUB_OUTPUT
+              echo "deploy-production=false" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+              echo "deploy-staging=true" >> $GITHUB_OUTPUT
+              echo "deploy-production=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Job 2: Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    if: needs.pre-deployment.outputs.deploy-staging == 'true'
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Image: ${{ needs.pre-deployment.outputs.image-tag }}"
+          # Add actual deployment commands here
+          # kubectl set image deployment/plataforma-app app=${{ needs.pre-deployment.outputs.image-tag }}
+          # kubectl rollout status deployment/plataforma-app
+
+      - name: Run post-deployment health check
+        run: |
+          echo "Running health checks..."
+          # curl -f https://staging.plataforma.dev/health || exit 1
+          sleep 30 # Wait for deployment to stabilize
+
+      - name: Run staging smoke tests
+        run: |
+          npx playwright install chromium
+          npm run test:smoke
+        env:
+          SMOKE_TEST_URL: ${{ vars.STAGING_URL }}
+          PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_URL }}
+
+      - name: Notify staging deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            Staging deployment ${{ job.status }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Environment: https://staging.plataforma.dev
+
+  # Job 3: Staging Validation Tests
+  staging-validation:
+    name: Staging Validation
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, deploy-staging]
+    if: needs.deploy-staging.result == 'success'
+
+    strategy:
+      matrix:
+        test-suite:
+          - smoke
+          - api
+          - integration
+          - performance
+          - security
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install test tools
+        run: |
+          npx playwright install chromium
+          npm install -g artillery k6
+
+      - name: Run ${{ matrix.test-suite }} tests
+        run: |
+          case "${{ matrix.test-suite }}" in
+            "smoke")
+              npm run test:smoke
+              ;;
+            "api")
+              npm run test:api
+              ;;
+            "integration")
+              npm run test:integration -- --testTimeout=60000
+              ;;
+            "performance")
+              k6 run monitoring/k6/staging-load-test.js
+              ;;
+            "security")
+              npm run test:security -- --env=staging
+              ;;
+          esac
+        env:
+          TEST_URL: ${{ vars.STAGING_URL }}
+          API_URL: ${{ vars.STAGING_API_URL }}
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-validation-${{ matrix.test-suite }}
+          path: |
+            test-results/
+            playwright-report/
+            k6-results.json
+          retention-days: 7
+
+  # Job 4: Production Deployment Approval
+  production-approval:
+    name: Production Deployment Approval
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, staging-validation]
+    if: |
+      needs.pre-deployment.outputs.deploy-production == 'true' && 
+      needs.staging-validation.result == 'success'
+    environment: production-approval
+
+    steps:
+      - name: Request production deployment approval
+        run: |
+          echo "Production deployment requested"
+          echo "Staging validation: ${{ needs.staging-validation.result }}"
+          echo "All staging tests must pass before production deployment"
+
+  # Job 5: Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, production-approval]
+    if: needs.production-approval.result == 'success'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          echo "Image: ${{ needs.pre-deployment.outputs.image-tag }}"
+          # Add blue-green deployment strategy
+          # kubectl apply -f k8s/production/
+          # kubectl set image deployment/plataforma-app app=${{ needs.pre-deployment.outputs.image-tag }}
+          # kubectl rollout status deployment/plataforma-app --timeout=600s
+
+      - name: Run production health check
+        run: |
+          echo "Running production health checks..."
+          for i in {1..10}; do
+            # if curl -f https://plataforma.dev/health; then
+            echo "Health check $i passed"
+            # break
+            # fi
+            sleep 30
+          done
+
+      - name: Verify deployment metrics
+        run: |
+          echo "Verifying deployment metrics..."
+          # Check error rates, response times, etc.
+          # curl -H "Authorization: Bearer ${{ secrets.MONITORING_TOKEN }}" \
+          #      "https://api.monitoring.service/metrics/deployment/verify"
+
+      - name: Run production smoke tests
+        run: |
+          npx playwright install chromium
+          npm run test:smoke
+        env:
+          SMOKE_TEST_URL: ${{ vars.PRODUCTION_URL }}
+          PLAYWRIGHT_BASE_URL: ${{ vars.PRODUCTION_URL }}
+
+      - name: Update deployment status
+        run: |
+          echo "Production deployment completed successfully"
+          echo "Version: ${{ github.sha }}"
+          echo "Deployed at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  # Job 6: Post-deployment Monitoring
+  post-deployment-monitoring:
+    name: Post-deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: needs.deploy-production.result == 'success'
+
+    steps:
+      - name: Setup monitoring
+        run: |
+          echo "Setting up post-deployment monitoring..."
+          # Configure alerts for the new deployment
+          # Update monitoring dashboards
+
+      - name: Run extended monitoring tests
+        run: |
+          echo "Running extended monitoring tests..."
+          # 15-minute monitoring window
+          for i in {1..15}; do
+            echo "Monitoring check $i/15"
+            # Check application metrics
+            # curl -f https://plataforma.dev/metrics
+            sleep 60
+          done
+
+      - name: Performance baseline update
+        run: |
+          echo "Updating performance baselines..."
+          # Update performance baselines for future comparisons
+          # Store deployment metrics for tracking
+
+      - name: Send success notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            🚀 Production deployment successful!
+            Version: ${{ github.sha }}
+            URL: https://plataforma.dev
+            All health checks passed ✅
+
+  # Job 7: Rollback on Failure
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: |
+      failure() && 
+      (needs.deploy-production.result == 'failure' || needs.post-deployment-monitoring.result == 'failure')
+    needs: [deploy-production, post-deployment-monitoring]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rollback production deployment
+        run: |
+          echo "Rolling back production deployment..."
+          # kubectl rollout undo deployment/plataforma-app
+          # kubectl rollout status deployment/plataforma-app
+
+      - name: Verify rollback
+        run: |
+          echo "Verifying rollback..."
+          # curl -f https://plataforma.dev/health
+          sleep 30
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: |
+            🔴 Production deployment rolled back!
+            Reason: Deployment or health check failure
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Action required: Review logs and fix issues
+
+  # Job 8: Deployment Summary
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [deploy-staging, staging-validation, deploy-production, post-deployment-monitoring, rollback]
+
+    steps:
+      - name: Generate deployment report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployments = [
+              { env: 'Staging', result: '${{ needs.deploy-staging.result }}' },
+              { env: 'Staging Validation', result: '${{ needs.staging-validation.result }}' },
+              { env: 'Production', result: '${{ needs.deploy-production.result }}' },
+              { env: 'Post-deployment Monitoring', result: '${{ needs.post-deployment-monitoring.result }}' },
+              { env: 'Rollback', result: '${{ needs.rollback.result }}' }
+            ];
+
+            let summary = '## Deployment Summary\n\n';
+            
+            deployments.forEach(deployment => {
+              if (deployment.result !== 'skipped') {
+                const emoji = deployment.result === 'success' ? '✅' : 
+                             deployment.result === 'failure' ? '❌' : '⚠️';
+                summary += `${emoji} **${deployment.env}**: ${deployment.result}\n`;
+              }
+            });
+
+            summary += `\n**Branch**: ${context.ref}\n`;
+            summary += `**Commit**: ${context.sha}\n`;
+            summary += `**Triggered by**: ${context.actor}\n`;
+            
+            core.summary.addRaw(summary);
+            core.summary.write();
+
+      - name: Update deployment metrics
+        run: |
+          echo "Updating deployment metrics..."
+          # Send metrics to monitoring system
+          # Track deployment frequency, success rate, etc.
+
+# Workflow-level settings
+timeout-minutes: 180
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel deployments

@@ -26,15 +26,72 @@ export default defineConfig(({ mode }) => ({
     // Otimizações de performance
     rollupOptions: {
       output: {
-        // Code splitting por chunks
-        manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 'lucide-react'],
-          'form-vendor': ['react-hook-form', 'zod', '@hookform/resolvers'],
-          'supabase-vendor': ['@supabase/supabase-js'],
-          'query-vendor': ['@tanstack/react-query'],
+        // Code splitting inteligente para 20+ módulos
+        manualChunks: (id) => {
+          // Vendor chunks principais
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            if (id.includes('@radix-ui') || id.includes('lucide-react')) {
+              return 'ui-vendor';
+            }
+            if (id.includes('react-hook-form') || id.includes('zod')) {
+              return 'form-vendor';
+            }
+            if (id.includes('@supabase')) {
+              return 'supabase-vendor';
+            }
+            if (id.includes('@tanstack/react-query')) {
+              return 'query-vendor';
+            }
+            if (id.includes('monaco-editor') || id.includes('@monaco-editor')) {
+              return 'editor-vendor';
+            }
+            if (id.includes('chart.js') || id.includes('recharts')) {
+              return 'chart-vendor';
+            }
+            if (id.includes('framer-motion')) {
+              return 'animation-vendor';
+            }
+            // Outros vendors menores em um chunk separado
+            return 'vendor';
+          }
           
+          // Module splitting por diretórios
+          if (id.includes('/pages/')) {
+            const match = id.match(/\/pages\/([^\/]+)/);
+            if (match) {
+              return `page-${match[1].toLowerCase()}`;
+            }
+          }
+          
+          if (id.includes('/components/ui/')) {
+            return 'ui-components';
+          }
+          
+          if (id.includes('/components/windows/')) {
+            return 'window-components';
+          }
+          
+          if (id.includes('/modulos/')) {
+            const match = id.match(/\/modulos\/([^\/]+)/);
+            if (match) {
+              return `module-${match[1].toLowerCase()}`;
+            }
+          }
+          
+          if (id.includes('/lib/') || id.includes('/utils/')) {
+            return 'shared-utils';
+          }
+          
+          if (id.includes('/hooks/')) {
+            return 'hooks';
+          }
+          
+          if (id.includes('/services/')) {
+            return 'services';
+          }
         },
         // Otimização de nomes de arquivo
         entryFileNames: 'assets/[name]-[hash].js',
@@ -42,19 +99,38 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
-    // Configurações de otimização
+    // Configurações avançadas de otimização
     target: 'esnext',
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.log em produção
+        drop_console: mode === 'production',
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug']
+        pure_funcs: mode === 'production' ? ['console.log', 'console.info', 'console.debug', 'console.warn'] : [],
+        // Otimizações avançadas
+        passes: 2,
+        unsafe_arrows: true,
+        unsafe_methods: true,
+        unsafe_proto: true,
+        dead_code: true,
+        side_effects: false
+      },
+      mangle: {
+        safari10: true,
+        properties: {
+          regex: /^_/
+        }
+      },
+      format: {
+        comments: false
       }
     },
-    // Análise de bundle
-    reportCompressedSize: true,
-    chunkSizeWarningLimit: 500
+    // Configurações de performance para builds grandes
+    sourcemap: mode === 'development' ? 'inline' : false,
+    reportCompressedSize: false, // Desabilita para builds mais rápidos
+    chunkSizeWarningLimit: 1000,
+    // Treeshaking optimization
+    treeshaking: true
   },
   plugins: [
     react({

@@ -4,8 +4,11 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useMemo,
+  memo,
   ReactNode,
 } from "react";
+import { usePerformanceTracking, performanceMonitor } from '@/lib/performance-utils';
 
 export interface WindowState {
   id: string;
@@ -50,9 +53,10 @@ interface WindowManagerProviderProps {
   children: ReactNode;
 }
 
-export function WindowManagerProvider({
+export const WindowManagerProvider = memo(function WindowManagerProvider({
   children,
 }: WindowManagerProviderProps) {
+  usePerformanceTracking('WindowManagerProvider');
   const [windows, setWindows] = useState<WindowState[]>([]);
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
   const [highestZIndex, setHighestZIndex] = useState(1000);
@@ -250,7 +254,7 @@ export function WindowManagerProvider({
     [],
   );
 
-  const value: WindowManagerContextType = {
+  const value: WindowManagerContextType = useMemo(() => ({
     windows,
     activeWindowId,
     createWindow,
@@ -263,14 +267,27 @@ export function WindowManagerProvider({
     getNextZIndex,
     snapWindowLeft,
     snapWindowRight,
-  };
+  }), [
+    windows,
+    activeWindowId,
+    createWindow,
+    closeWindow,
+    minimizeWindow,
+    maximizeWindow,
+    restoreWindow,
+    focusWindow,
+    updateWindow,
+    getNextZIndex,
+    snapWindowLeft,
+    snapWindowRight,
+  ]);
 
   return (
     <WindowManagerContext.Provider value={value}>
       {children}
     </WindowManagerContext.Provider>
   );
-}
+});
 
 export function useWindowManager() {
   const context = useContext(WindowManagerContext);

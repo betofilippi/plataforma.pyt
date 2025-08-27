@@ -31,6 +31,20 @@ interface AIStreamEvent {
   timestamp: Date;
 }
 
+interface NotificationEvent {
+  type: 'notification_created' | 'notification_read' | 'notification_archived' | 'notification_deleted';
+  notification: any;
+  user_id: string;
+  timestamp: Date;
+}
+
+interface NotificationSubscription {
+  userId: string;
+  categories?: string[];
+  modules?: string[];
+  priorities?: string[];
+}
+
 interface RoomData {
   users: Map<string, UserPresence>;
   activeSheets: Set<string>;
@@ -43,6 +57,7 @@ export class RealtimeServer {
   private rooms: Map<string, RoomData> = new Map();
   private userSockets: Map<string, string> = new Map(); // userId -> socketId
   private socketUsers: Map<string, string> = new Map(); // socketId -> userId
+  private notificationSubscriptions: Map<string, NotificationSubscription> = new Map(); // socketId -> subscription
   
   constructor(server: Server) {
     this.io = new SocketIOServer(server, {
@@ -139,6 +154,20 @@ export class RealtimeServer {
       // Disconnect event
       socket.on('disconnect', () => {
         this.handleDisconnect(socket);
+      });
+
+      // Notification subscription events
+      socket.on('subscribe_notifications', (data: { categories?: string[]; modules?: string[]; priorities?: string[] }) => {
+        this.handleNotificationSubscription(socket, data);
+      });
+
+      socket.on('unsubscribe_notifications', () => {
+        this.handleNotificationUnsubscription(socket);
+      });
+
+      // Mark notification as read
+      socket.on('notification_read', (data: { notificationId: string }) => {
+        this.handleNotificationRead(socket, data);
       });
 
       // Error handling
@@ -352,7 +381,62 @@ export class RealtimeServer {
     this.userSockets.delete(user.id);
     this.socketUsers.delete(socket.id);
 
+    // Clean up notification subscription
+    this.notificationSubscriptions.delete(socket.id);
+
     console.log(`User ${user.username} disconnected from WebSocket`);
+  }
+
+  // ===== NOTIFICATION HANDLERS =====
+
+  private handleNotificationSubscription(socket: any, data: { categories?: string[]; modules?: string[]; priorities?: string[] }) {
+    const user = socket.data.user;
+    
+    const subscription: NotificationSubscription = {
+      userId: user.id,
+      categories: data.categories,
+      modules: data.modules,
+      priorities: data.priorities
+    };
+
+    this.notificationSubscriptions.set(socket.id, subscription);
+    
+    socket.emit('notification_subscription_confirmed', {
+      status: 'subscribed',
+      subscription: subscription
+    });
+
+    console.log(`User ${user.username} subscribed to notifications:`, subscription);
+  }
+
+  private handleNotificationUnsubscription(socket: any) {
+    const user = socket.data.user;
+    
+    this.notificationSubscriptions.delete(socket.id);
+    
+    socket.emit('notification_subscription_confirmed', {
+      status: 'unsubscribed'
+    });
+
+    console.log(`User ${user.username} unsubscribed from notifications`);
+  }
+
+  private handleNotificationRead(socket: any, data: { notificationId: string }) {
+    const user = socket.data.user;
+    
+    // Broadcast to other user sessions that notification was read
+    const userSocketId = this.userSockets.get(user.id);
+    if (userSocketId && userSocketId !== socket.id) {
+      const otherSocket = this.io.sockets.sockets.get(userSocketId);
+      if (otherSocket) {
+        otherSocket.emit('notification_read_sync', {
+          notificationId: data.notificationId,
+          userId: user.id
+        });
+      }
+    }
+
+    console.log(`User ${user.username} marked notification as read: ${data.notificationId}`);
   }
 
   // Public methods for external use
@@ -452,10 +536,71 @@ export class RealtimeServer {
     }, 5 * 60 * 1000);
   }
 
+  // ===== NOTIFICATION BROADCAST METHODS =====
+
+  public broadcastNotification(notification: any, eventType: NotificationEvent['type']): void {
+    const event: NotificationEvent = {
+      type: eventType,
+      notification,
+      user_id: notification.user_id,
+      timestamp: new Date()
+    };
+
+    // Find user's socket
+    const userSocketId = this.userSockets.get(notification.user_id);
+    if (!userSocketId) return;
+
+    const socket = this.io.sockets.sockets.get(userSocketId);
+    if (!socket) return;
+
+    // Check if user has notification subscription
+    const subscription = this.notificationSubscriptions.get(userSocketId);
+    if (!subscription) {
+      // If no specific subscription, send all notifications
+      socket.emit('notification_event', event);
+      return;
+    }
+
+    // Check if notification matches subscription filters
+    const matchesCategory = !subscription.categories || 
+      subscription.categories.includes(notification.category);
+    
+    const matchesModule = !subscription.modules || 
+      !notification.module_name || 
+      subscription.modules.includes(notification.module_name);
+    
+    const matchesPriority = !subscription.priorities || 
+      subscription.priorities.includes(notification.priority);
+
+    if (matchesCategory && matchesModule && matchesPriority) {
+      socket.emit('notification_event', event);
+      
+      // For critical notifications, also emit a special alert
+      if (notification.priority === 'critical') {
+        socket.emit('critical_notification', event);
+      }
+    }
+  }
+
+  public getNotificationSubscriptions(userId: string): NotificationSubscription | null {
+    const socketId = this.userSockets.get(userId);
+    if (!socketId) return null;
+    
+    return this.notificationSubscriptions.get(socketId) || null;
+  }
+
+  public getUserSocket(userId: string): any | null {
+    const socketId = this.userSockets.get(userId);
+    if (!socketId) return null;
+    
+    return this.io.sockets.sockets.get(socketId) || null;
+  }
+
   public getStats() {
     return {
       totalRooms: this.rooms.size,
       totalConnections: this.io.sockets.sockets.size,
+      notificationSubscriptions: this.notificationSubscriptions.size,
       roomDetails: Array.from(this.rooms.entries()).map(([roomId, room]) => ({
         roomId,
         userCount: room.users.size,

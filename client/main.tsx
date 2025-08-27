@@ -1,6 +1,7 @@
 import React, { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { startPerformanceProfiler } from './lib/performance-utils'
 
 // Debug: Log when main.tsx starts
 console.log('🚀 [MAIN.TSX] Starting application...');
@@ -36,6 +37,11 @@ if (!rootElement) {
     console.log('📦 [MAIN.TSX] Root created:', root);
     
     console.log('🎨 [MAIN.TSX] Rendering App component...');
+    
+    // Start performance profiler in development
+    if (process.env.NODE_ENV === 'development') {
+      startPerformanceProfiler();
+    }
     
     // Enable StrictMode for better error detection
     root.render(

@@ -1,12 +1,14 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, memo, useMemo } from "react";
 import { Minus, Square, X, Maximize2, Minimize2, Columns, PanelLeft, PanelRight } from "lucide-react";
 import { WindowState, useWindowManager } from "./WindowManager";
+import { usePerformanceTracking, useDebouncePerformance } from '@/lib/performance-utils';
 
 interface WindowProps {
   window: WindowState;
 }
 
-export function Window({ window }: WindowProps) {
+export const Window = memo(function Window({ window }: WindowProps) {
+  usePerformanceTracking(`Window-${window.title}`);
   const {
     closeWindow,
     minimizeWindow,
@@ -56,6 +58,21 @@ export function Window({ window }: WindowProps) {
     [window.canMove, window.isMaximized, window.position, handleFocus],
   );
 
+  // Debounced mouse move para melhor performance durante drag/resize
+  const debouncedUpdatePosition = useDebouncePerformance(
+    (position: { x: number; y: number }) => {
+      updateWindow(window.id, { position });
+    },
+    16 // 60fps limit
+  );
+
+  const debouncedUpdateSize = useDebouncePerformance(
+    (size: { width: number; height: number }) => {
+      updateWindow(window.id, { size });
+    },
+    16 // 60fps limit
+  );
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (isDragging && window.canMove && !window.isMaximized) {
@@ -80,9 +97,7 @@ export function Window({ window }: WindowProps) {
           );
 
           if (!isNaN(constrainedX) && !isNaN(constrainedY)) {
-            updateWindow(window.id, {
-              position: { x: constrainedX, y: constrainedY },
-            });
+            debouncedUpdatePosition({ x: constrainedX, y: constrainedY });
           }
         }
       }
@@ -98,13 +113,11 @@ export function Window({ window }: WindowProps) {
         );
 
         if (!isNaN(newWidth) && !isNaN(newHeight)) {
-          updateWindow(window.id, {
-            size: { width: newWidth, height: newHeight },
-          });
+          debouncedUpdateSize({ width: newWidth, height: newHeight });
         }
       }
     },
-    [isDragging, isResizing, dragStart, resizeStart, window, updateWindow],
+    [isDragging, isResizing, dragStart, resizeStart, window, debouncedUpdatePosition, debouncedUpdateSize],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -144,36 +157,42 @@ export function Window({ window }: WindowProps) {
     }
   }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  // Window controls
-  const handleMinimize = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    console.log("MINIMIZE BUTTON CLICKED - Window ID:", window.id);
-    console.log("Current window state before minimize:", window);
-    minimizeWindow(window.id);
-  };
+  // Memoized window controls para evitar re-renders
+  const windowControls = useMemo(() => ({
+    handleMinimize: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      minimizeWindow(window.id);
+    },
+    
+    handleMaximize: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      maximizeWindow(window.id);
+    },
+    
+    handleClose: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      closeWindow(window.id);
+    }
+  }), [window.id, minimizeWindow, maximizeWindow, closeWindow]);
   
-  const handleMaximize = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    maximizeWindow(window.id);
-  };
+  const { handleMinimize, handleMaximize, handleClose } = windowControls;
+  const snapControls = useMemo(() => ({
+    handleSnapLeft: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      snapWindowLeft(window.id);
+      setShowSnapMenu(false);
+    },
+    handleSnapRight: (e: React.MouseEvent) => {
+      e.stopPropagation();
+      snapWindowRight(window.id);
+      setShowSnapMenu(false);
+    }
+  }), [window.id, snapWindowLeft, snapWindowRight]);
   
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    closeWindow(window.id);
-  };
-  const handleSnapLeft = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    snapWindowLeft(window.id);
-    setShowSnapMenu(false);
-  };
-  const handleSnapRight = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    snapWindowRight(window.id);
-    setShowSnapMenu(false);
-  };
+  const { handleSnapLeft, handleSnapRight } = snapControls;
 
   // Double-click to maximize
   const handleDoubleClick = () => {
@@ -307,4 +326,4 @@ export function Window({ window }: WindowProps) {
       )}
     </div>
   );
-}
+});

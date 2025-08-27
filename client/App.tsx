@@ -20,6 +20,10 @@ import Index from "./pages/Index";
 import { lazy, Suspense, useState, useEffect } from "react";
 import { moduleRegistry } from "./lib/moduleRegistry";
 
+// Performance monitoring
+import PerformanceDashboard from "./components/ui/PerformanceDashboard";
+import { usePerformanceTracking } from "./lib/performance-utils";
+
 // Debug logging
 console.log('🎨 [APP.TSX] App component loading...');
 
@@ -99,6 +103,14 @@ const ModuleFederationDemo = lazy(() => {
   });
 });
 
+const ModuleRegistryDemo = lazy(() => {
+  console.log('🔄 [LAZY] Loading ModuleRegistryDemo...');
+  return import("./pages/ModuleRegistryDemo").catch(err => {
+    console.error('❌ [LAZY] Failed to load ModuleRegistryDemo:', err);
+    throw err;
+  });
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -114,6 +126,11 @@ console.log('🎯 [APP] All components loaded, creating App...');
 
 const App = () => {
   console.log('🎨 [APP.TSX] App component rendering...');
+  usePerformanceTracking('App');
+  
+  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(
+    process.env.NODE_ENV === 'development'
+  );
   
   return (
     <ErrorBoundary>
@@ -219,6 +236,22 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
+                  {/* MODULE REGISTRY DEMO - Protected - For development and testing */}
+                  <Route path="/module-registry-demo" element={
+                    <ProtectedRoute requiredRole={['admin', 'developer']}>
+                      <Suspense fallback={
+                        <div className="flex items-center justify-center h-screen">
+                          <div className="flex flex-col items-center space-y-4">
+                            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            <p className="text-gray-600">Carregando Module Registry Demo...</p>
+                          </div>
+                        </div>
+                      }>
+                        <ModuleRegistryDemo />
+                      </Suspense>
+                    </ProtectedRoute>
+                  } />
+
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
@@ -226,6 +259,14 @@ const App = () => {
               </PermissionProvider>
             </AuthProvider>
           </BrowserRouter>
+          
+          {/* Performance Dashboard - Only in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <PerformanceDashboard 
+              isExpanded={showPerformanceDashboard}
+              onToggle={setShowPerformanceDashboard}
+            />
+          )}
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

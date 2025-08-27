@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * useModule Hook
  * Hook React para usar o Module Registry de forma fácil e reativa
@@ -274,12 +276,10 @@ export function withModule<P extends object>(
     return function WithModuleComponent(props: P) {
       const moduleData = useModule(moduleId, options);
       
-      return (
-        <WrappedComponent 
-          {...props} 
-          moduleData={moduleData}
-        />
-      );
+      return React.createElement(WrappedComponent, {
+        ...props,
+        moduleData
+      });
     };
   };
 }

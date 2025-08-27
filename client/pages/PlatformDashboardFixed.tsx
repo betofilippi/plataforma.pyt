@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import {
   Settings as SistemaIcon,
   Table as TableIcon,
+  Palette as ThemeIcon,
 } from "lucide-react";
 import {
   WindowManagerProvider,
   WindowDesktop,
   useCreateWindow,
+  ModuleDesktop,
+  GlobalWindowTemplate,
 } from "@/components/windows";
 import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/components/ui';
 import { FileExplorer } from './windows/FileExplorer';
@@ -91,6 +94,20 @@ function PlatformDashboardContent() {
   const createWindow = useCreateWindow();
   const rootPath = 'C:\\Users\\Beto\\OneDrive - NXT Indústria e Comércio Ltda\\dev\\plataforma.app';
 
+  // Open theme configurator window
+  const openThemeConfigurator = () => {
+    createWindow({
+      title: "🎨 Window Theme Configurator",
+      component: <GlobalWindowTemplate />,
+      position: { x: 100, y: 100 },
+      size: { width: 800, height: 600 },
+      isMinimized: false,
+      isMaximized: false,
+      canResize: true,
+      canMove: true,
+    });
+  };
+
   // Configurações do sistema (não é módulo)
   const systemSettings: ModuleItem[] = [
     {
@@ -101,10 +118,20 @@ function PlatformDashboardContent() {
       href: "/sistema",
       position: { x: 250, y: 150 },
     },
+    {
+      id: "theme",
+      name: "TEMAS",
+      icon: ThemeIcon,
+      color: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      href: "#",
+      position: { x: 350, y: 150 },
+    },
   ];
 
   const handleModuleClick = (module: ModuleItem) => {
-    if (module.href !== "#") {
+    if (module.id === "theme") {
+      openThemeConfigurator();
+    } else if (module.href !== "#") {
       navigate(module.href);
     }
   };
@@ -132,13 +159,14 @@ function PlatformDashboardContent() {
 export default function PlatformDashboardFixed() {
   return (
     <WindowManagerProvider>
-      <WindowDesktop 
-        showTaskbar={true}
-        backgroundColor="#1f2937"
-        disableContextMenu={false}
+      <ModuleDesktop 
+        moduleId="platform-main"
+        moduleName="Plataforma OS"
+        showGlobalTaskbar={true}
+        enableWindowFactory={true}
       >
         <PlatformDashboardContent />
-      </WindowDesktop>
+      </ModuleDesktop>
     </WindowManagerProvider>
   );
 }
