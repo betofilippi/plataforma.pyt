@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plataforma OS - Enterprise Virtual Operating System</title>
+    <meta name="description" content="Sistema operacional empresarial virtual com arquitetura modular avançada" />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <!-- Performance Optimization -->
+    <link rel="dns-prefetch" href="//db.yhvtsbkotszxqndkhhhx.supabase.co">
+    <link rel="preconnect" href="//db.yhvtsbkotszxqndkhhhx.supabase.co">
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen" style="
+      position: fixed; 
+      top: 0; left: 0; 
+      width: 100%; height: 100%; 
+      background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 9999;
+      transition: opacity 0.5s ease-out;
+    ">
+      <div style="text-align: center; color: white;">
+        <div style="
+          width: 60px; 
+          height: 60px; 
+          border: 3px solid #333; 
+          border-top: 3px solid #6366f1; 
+          border-radius: 50%; 
+          animation: spin 1s linear infinite; 
+          margin: 0 auto 20px;
+        "></div>
+        <h2 style="margin: 0; font-family: -apple-system, sans-serif;">Plataforma OS</h2>
+        <p style="margin: 10px 0 0; opacity: 0.7; font-family: -apple-system, sans-serif;">Carregando sistema operacional...</p>
+      </div>
+    </div>
+    
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Hide loading screen when app loads */
+      .app-loaded #loading-screen {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+    
+    <script>
+      // Remove loading screen when React app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.body.classList.add('app-loaded');
+          setTimeout(() => {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) loadingScreen.remove();
+          }, 500);
+        }, 1000);
+      });
+      
+      // Service Worker Registration (if available)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => console.log('SW registered'))
+            .catch(error => console.log('SW registration failed'));
+        });
+      }
+    </script>
+    
+    <!-- React App Entry Point -->
+    <script type="module" src="/client/main.tsx"></script>
+  </body>
+</html>
