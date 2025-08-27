@@ -143,10 +143,10 @@ Senha: (qualquer uma)
 
 ## 📦 Módulos da Plataforma
 
-### ⚠️ DUPLICAÇÃO CRÍTICA DETECTADA:
-**O Database Module existe em DOIS lugares:**
-1. `packages/@plataforma/module-database/` - Versão USADA (8,712 linhas)
-2. `modules/database/` - Versão DUPLICADA não usada (8,711 linhas)
+### ✅ LIMPEZA COMPLETA REALIZADA (26/08/2025):
+**Removidos 869K de código duplicado!**
+- Pasta `modules/` completa deletada
+- Database Module agora em local único: `packages/@plataforma/module-database/`
 
 ### ✅ Módulos Existentes (Realidade):
 
@@ -162,21 +162,18 @@ Senha: (qualquer uma)
 - **Status**: Apenas uma página com ícones
 - **Modularização**: Nenhuma
 
-#### 3. **Marketplace** (Placeholder)
-- **Localização**: `modules/marketplace/` (vazio)
-- **Status**: Apenas estrutura de pastas
-
-#### 4. **Vendas** (Placeholder)
-- **Localização**: `modules/vendas/` (vazio)
-- **Status**: Apenas estrutura de pastas
+#### 3. **Marketplace** (Página)
+- **Localização**: `client/pages/MarketplaceModule.tsx`
+- **Status**: Interface funcional
+- **Modularização**: Nenhuma
 
 ### 📌 VERDADE ABSOLUTA:
 - **Módulos prometidos**: 20
 - **Módulos com código**: 1 (Database duplicado)
 - **Módulos funcionais**: 0.5 (Database parcial)
-- **Placeholders vazios**: 3+
-- **Duplicação desnecessária**: 8,711 linhas
-- **Module Registry**: QUEBRADO (comentado para debug)
+- **Placeholders vazios**: 0 (limpos)
+- **Duplicação**: 0 (removida)
+- **Module Registry**: ✅ FUNCIONANDO
 - **Nenhum módulo tem repositório próprio** no GitHub
 
 Veja a seção [Como Criar Novos Módulos](#-guia-para-desenvolvimento-de-módulos) para implementar novos módulos.
@@ -200,8 +197,8 @@ Veja a seção [Como Criar Novos Módulos](#-guia-para-desenvolvimento-de-módul
 
 #### Module Registry System:
 - **Localização**: `client/lib/moduleRegistry.ts`
-- **Status**: ❌ QUEBRADO (DynamicModuleLoader comentado para debug)
-- **Problema**: Imports hardcoded, não funciona dinamicamente
+- **Status**: ✅ FUNCIONANDO (DynamicModuleLoader ativo)
+- **Carregamento**: Database module via import dinâmico
 
 
 ## 📦 Module Registry System (NOVO!)

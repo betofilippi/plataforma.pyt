@@ -18,18 +18,48 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 // Modules - Lazy loaded usando o Module Registry
 import { lazy, Suspense, useState, useEffect } from "react";
-// import { moduleRegistry } from "./lib/moduleRegistry"; // TEMPORARIAMENTE COMENTADO PARA DEBUG
+import { moduleRegistry } from "./lib/moduleRegistry";
 
 // Debug logging
 console.log('🎨 [APP.TSX] App component loading...');
 
 // Dynamic component loader for module registry
-// TEMPORARIAMENTE COMENTADO PARA DEBUG - PROBLEMA AQUI!
-/*
 const DynamicModuleLoader = ({ moduleId }: { moduleId: string }) => {
-  return <div>Module {moduleId} desabilitado para debug</div>;
+  const [Component, setComponent] = useState<React.ComponentType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadModule = async () => {
+      try {
+        const module = moduleRegistry.find(m => m.id === moduleId);
+        if (!module) {
+          setError(`Module ${moduleId} not found`);
+          return;
+        }
+        
+        // For now, hardcode database module
+        if (moduleId === 'database') {
+          const { DatabaseModule } = await import('@plataforma/module-database');
+          setComponent(() => DatabaseModule);
+        }
+        setLoading(false);
+      } catch (err) {
+        console.error(`Failed to load module ${moduleId}:`, err);
+        setError(err.toString());
+        setLoading(false);
+      }
+    };
+    
+    loadModule();
+  }, [moduleId]);
+
+  if (loading) return <div>Loading module...</div>;
+  if (error) return <div>Error loading module: {error}</div>;
+  if (!Component) return <div>Module not found</div>;
+  
+  return <Component />;
 };
-*/
 
 // Lazy loaded components with better error handling
 const SistemaModule = lazy(() => {
