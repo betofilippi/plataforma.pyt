@@ -17,7 +17,7 @@ import WindowTemplate from '@/components/windows/WindowTemplate';
 import TaskbarTemplate from '@/components/windows/TaskbarTemplate';
 import { TablesTemplate } from './windows/TablesTemplate';
 import { FileExplorer } from './windows/FileExplorer';
-import TableEditorWithSchema from './windows/TableEditorWithSchema';
+import { TableEditorWithSchema } from '@plataforma/module-database';
 import { STANDARD_ICON_CLASSES } from '@/lib/constants/icon-sizes';
 import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/components/ui';
 import { getModuleColor } from '@/lib/module-colors';

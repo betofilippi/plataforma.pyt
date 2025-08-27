@@ -21,24 +21,29 @@ const queryClient = new QueryClient({
   },
 });
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
+// DISABLED: This was conflicting with main app mounting
+// Module registry should export components, not mount its own React app
+// const root = ReactDOM.createRoot(
+//   document.getElementById('root') as HTMLElement
+// );
 
-root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <App />
-            <Toaster richColors position="top-right" />
-            {process.env.NODE_ENV === 'development' && (
-              <ReactQueryDevtools initialIsOpen={false} />
-            )}
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </BrowserRouter>
-  </React.StrictMode>
-);
+// root.render(
+//   <React.StrictMode>
+//     <BrowserRouter>
+//       <QueryClientProvider client={queryClient}>
+//         <ThemeProvider>
+//           <AuthProvider>
+//             <App />
+//             <Toaster richColors position="top-right" />
+//             {process.env.NODE_ENV === 'development' && (
+//               <ReactQueryDevtools initialIsOpen={false} />
+//             )}
+//           </AuthProvider>
+//         </ThemeProvider>
+//       </QueryClientProvider>
+//     </BrowserRouter>
+//   </React.StrictMode>
+// );
+
+// Export components for use by main app if needed
+export { App, AuthProvider, ThemeProvider, queryClient };

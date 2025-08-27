@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Test - Simple</title>
+</head>
+<body>
+    <div id="test-root" style="padding: 20px; background: #f0f0f0; margin: 20px;">
+        <h1>Testing React Mount...</h1>
+        <div id="status">Loading...</div>
+    </div>
+
+    <script type="module">
+        console.log('🧪 Test starting...');
+        
+        try {
+            // Import React
+            const { default: React } = await import('/node_modules/react/index.js');
+            const { createRoot } = await import('/node_modules/react-dom/client.js');
+            
+            console.log('✅ React imported successfully');
+            
+            // Try to create a simple component
+            const TestComponent = () => {
+                return React.createElement('div', { 
+                    style: { color: 'green', fontSize: '18px' } 
+                }, '✅ React is working!');
+            };
+            
+            // Try to mount it
+            const container = document.getElementById('test-root');
+            const root = createRoot(container);
+            
+            console.log('✅ Root created successfully');
+            
+            root.render(React.createElement(TestComponent));
+            
+            console.log('✅ Component rendered successfully');
+            
+            document.getElementById('status').innerHTML = '✅ React mount test successful!';
+            
+        } catch (error) {
+            console.error('❌ React test failed:', error);
+            document.getElementById('status').innerHTML = `❌ Error: ${error.message}`;
+        }
+    </script>
+</body>
+</html>

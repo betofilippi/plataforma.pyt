@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Independent React Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+        #test-root { border: 2px solid #333; padding: 20px; background: white; }
+    </style>
+</head>
+<body>
+    <h1>Independent React Test (No Vite)</h1>
+    <p>This test bypasses Vite entirely and loads React directly from CDN</p>
+    
+    <div id="test-root">Loading...</div>
+    
+    <!-- React from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script>
+        console.log('🧪 Starting independent React test...');
+        
+        if (window.React && window.ReactDOM) {
+            console.log('✅ React and ReactDOM loaded from CDN');
+            
+            const { createElement, StrictMode } = React;
+            const { createRoot } = ReactDOM;
+            
+            const TestApp = () => {
+                return createElement('div', {
+                    style: {
+                        padding: '20px',
+                        background: 'lightgreen',
+                        color: 'darkgreen',
+                        borderRadius: '8px'
+                    }
+                }, 
+                '🎉 SUCCESS! React is working independently of Vite!'
+                );
+            };
+            
+            const container = document.getElementById('test-root');
+            const root = createRoot(container);
+            
+            root.render(createElement(TestApp));
+            
+            console.log('✅ React app rendered successfully');
+            
+        } else {
+            console.error('❌ Failed to load React from CDN');
+            document.getElementById('test-root').innerHTML = 
+                '<div style="color: red;">Failed to load React from CDN</div>';
+        }
+    </script>
+</body>
+</html>

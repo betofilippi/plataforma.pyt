@@ -2,6 +2,12 @@ import { stripIndent } from 'common-tags'
 
 import { columnsSql, extensionsSql, tablesSql } from './sql'
 
+// Module Registry System
+export { moduleRegistry, ModuleRegistry } from './moduleRegistry'
+export { default as useModule, useModules, useModulesByCategory, useModuleRegistry, useModuleHotReload, useLazyModule, withModule } from './useModule'
+export type { ModuleConfig, LoadedModule, ModuleRegistryOptions } from './moduleRegistry'
+export type * from './types/module-types'
+
 export const SYSTEM_SCHEMAS = [
   'information_schema',
   'pg_catalog',

@@ -1,5 +1,5 @@
 import { defineConfig, Plugin } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react"; // Switch to regular React plugin
 import path from "path";
 import { createServer } from "./server";
 // Temporarily disabled - causing import corruption
@@ -8,6 +8,7 @@ import { createServer } from "./server";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   cacheDir: false, // Disable cache to prevent EBUSY errors
+  clearScreen: false,
   server: {
     host: "::",
     port: 3030, // Porta diferente para evitar conflitos
@@ -57,10 +58,10 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      // Configurações do React Plugin para otimização
-      include: "**/*.{jsx,tsx}",
-      // Fast Refresh configuration
-      fastRefresh: true,
+      // Properly disable Fast Refresh and HMR in development
+      fastRefresh: mode !== 'development',
+      // Alternative: Use environment variable to control
+      // fastRefresh: process.env.VITE_DISABLE_FAST_REFRESH !== 'true',
     }),
     // Module Federation Plugin temporarily disabled - was corrupting imports
     // moduleFederation(
@@ -89,28 +90,22 @@ export default defineConfig(({ mode }) => ({
   ],
   // Otimizações de dependências com exclusões para resolver EBUSY
   optimizeDeps: {
-    force: false,
+    // Removido force: true para evitar conflito com cacheDir: false
+    entries: ['./client/main.tsx'], // Entry point específico
     include: [
       'react',
-      'react-dom', 
+      'react-dom',
+      'react-dom/client',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
       'react-router-dom',
       '@tanstack/react-query',
       'lucide-react',
       '@supabase/supabase-js',
-      '@supabase/postgrest-js'
+      '@supabase/postgrest-js',
+      'lodash.debounce' // Adiciona lodash.debounce para pré-compilação
     ],
-    exclude: [
-      // Dependências que causam EBUSY
-      '@radix-ui/react-slot',
-      'clsx',
-      'tailwind-merge',
-      '@radix-ui/react-toast',
-      'class-variance-authority',
-      'react-hook-form',
-      'zod',
-      // Dependências pesadas
-      '@mui/icons-material',
-    ]
+    exclude: []
   },
   // Configurações de performance
   esbuild: {
@@ -129,7 +124,12 @@ export default defineConfig(({ mode }) => ({
       { find: "@/modulos", replacement: path.resolve(__dirname, "./modulos") },
       { find: "@/shared", replacement: path.resolve(__dirname, "./shared") },
       { find: "@", replacement: path.resolve(__dirname, "./client") },
-      { find: "@plataforma/vite-plugin-module-federation", replacement: path.resolve(__dirname, "./packages/vite-plugin-module-federation/src") }
+      // Package modules aliases
+      { find: "@plataforma/module-database", replacement: path.resolve(__dirname, "./packages/@plataforma/module-database/src") },
+      { find: "@plataforma/vite-plugin-module-federation", replacement: path.resolve(__dirname, "./packages/vite-plugin-module-federation/src") },
+      { find: "@plataforma/module-registry", replacement: path.resolve(__dirname, "./packages/module-registry/src") },
+      { find: "@plataforma/module-contracts", replacement: path.resolve(__dirname, "./packages/module-contracts/src") },
+      { find: "@plataforma/sdk", replacement: path.resolve(__dirname, "./packages/sdk/src") }
     ],
   },
 }));

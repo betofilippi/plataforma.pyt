@@ -93,15 +93,22 @@ taskkill /PID 12345 /F
 
 ## 🎯 Visão Geral do Projeto
 
-**plataforma.app** é uma plataforma empresarial AI-First que funciona como um sistema operacional virtual no navegador, com 20+ módulos integrados e foco em inteligência artificial.
+**Plataforma OS** é um sistema operacional empresarial virtual no navegador, com arquitetura modular distribuída em múltiplos repositórios.
+
+### Arquitetura Distribuída:
+- 🏢 **Core Monorepo**: `plataforma-os-core` (privado) - Sistema principal
+- 📦 **SDK Oficial**: `plataforma-os-sdk` (público) - Ferramentas de desenvolvimento
+- 📚 **Documentação**: `plataforma-os-docs` (público) - Guias e APIs
+- 🎨 **Templates**: 3 templates públicos (basic, business, AI)
+- 🔧 **Módulos**: Repositórios independentes para cada módulo
 
 ### Características Principais:
-- 🖥️ **Desktop Virtual**: Sistema de janelas flutuantes estilo Windows/MacOS
-- 🧠 **AI-First**: Módulo IA com 5 componentes vazios (apenas ícones)
-- 💾 **Database Integrado**: PostgreSQL multi-schema com interface visual
-- 📊 **20 Módulos Ativos**: Todos os departamentos empresariais cobertos
+- 🖥️ **Desktop Virtual**: Sistema de janelas flutuantes estilo OS moderno
+- 🧩 **Arquitetura Modular**: Módulos independentes via SDK
+- 💾 **Database Integrado**: PostgreSQL multi-schema com editor visual
 - 🎨 **Design System**: Glassmorphism e componentes padronizados
-- 🔐 **Autenticação Simples**: Login demo para desenvolvimento
+- 🚀 **SDK Completo**: Ferramentas para desenvolvimento rápido
+- 🔐 **Enterprise Ready**: Arquitetura escalável e segura
 
 ## 🌐 PORTAS E URLS (ATUALIZADO!)
 
@@ -134,61 +141,106 @@ Email: adm@nxt.eco.br
 Senha: (qualquer uma)
 ```
 
-## 📦 Módulos Implementados (20)
+## 📦 Módulos da Plataforma
 
-Todos os módulos abrem como janelas flutuantes dentro do sistema:
+### ⚠️ DUPLICAÇÃO CRÍTICA DETECTADA:
+**O Database Module existe em DOIS lugares:**
+1. `packages/@plataforma/module-database/` - Versão USADA (8,712 linhas)
+2. `modules/database/` - Versão DUPLICADA não usada (8,711 linhas)
 
-### Módulos Core
-1. **Inteligência Artificial** - 5 componentes vazios (apenas ícones)
-2. **Base de Dados** - Editor de tabelas com glassmorphism
-3. **Sistema** - Configurações gerais
+### ✅ Módulos Existentes (Realidade):
 
-### Módulos de Negócio
-4. **Estoque** - Controle de inventário
-5. **Montagem** - Gestão de produção
-6. **Vendas** - Gestão comercial
-7. **Faturamento** - Emissão de notas
-8. **Expedição** - Logística e entregas
+#### 1. **Database** (Módulo de Negócio)
+- **Localização REAL**: `packages/@plataforma/module-database/`
+- **Localização DUPLICADA**: `modules/database/` (NÃO USADA)
+- **Problema**: TableEditorCanvas.tsx com 8,712 linhas (95.4% monolítico)
+- **Modularização real**: Apenas 4.6% do código extraído (~400 linhas)
+- **Status**: Parcialmente funcional, mas NÃO modularizado
 
-### Módulos Administrativos
-9. **RH** - Recursos Humanos
-10. **Administrativo** - Gestão administrativa
-11. **Financeiro** - Gestão financeira
-12. **Jurídico** - Gestão jurídica
-13. **Tributário** - Gestão fiscal
+#### 2. **Sistema** (Página, não módulo)
+- **Localização**: `client/pages/SistemaModule.tsx`
+- **Status**: Apenas uma página com ícones
+- **Modularização**: Nenhuma
 
-### Módulos de Suporte
-14. **Suporte** - Atendimento ao cliente
-15. **Comunicação** - Comunicação interna
-16. **Marketing** - Marketing e campanhas
-17. **Produtos** - Catálogo de produtos
-18. **Lojas** - Gestão de lojas
-19. **Cadastros** - Cadastros gerais
-20. **Notificações** - Central de alertas
+#### 3. **Marketplace** (Placeholder)
+- **Localização**: `modules/marketplace/` (vazio)
+- **Status**: Apenas estrutura de pastas
 
-## 🤖 Componentes de IA (VAZIOS)
+#### 4. **Vendas** (Placeholder)
+- **Localização**: `modules/vendas/` (vazio)
+- **Status**: Apenas estrutura de pastas
 
-Localizados em `client/components/ia/` - **Atualmente apenas ícones placeholder**:
+### 📌 VERDADE ABSOLUTA:
+- **Módulos prometidos**: 20
+- **Módulos com código**: 1 (Database duplicado)
+- **Módulos funcionais**: 0.5 (Database parcial)
+- **Placeholders vazios**: 3+
+- **Duplicação desnecessária**: 8,711 linhas
+- **Module Registry**: QUEBRADO (comentado para debug)
+- **Nenhum módulo tem repositório próprio** no GitHub
 
-### 1. **MCPComponent.tsx**
-- Ícone: `Cpu` (lucide-react)
-- Placeholder vazio para futuro gerenciador MCP
+Veja a seção [Como Criar Novos Módulos](#-guia-para-desenvolvimento-de-módulos) para implementar novos módulos.
 
-### 2. **PlaygroundComponent.tsx**
-- Ícone: `PlayCircle` (lucide-react)
-- Placeholder vazio para futuro playground de IA
+## 🚨 STATUS REAL DA MODULARIZAÇÃO (26/08/2025)
 
-### 3. **OCRComponent.tsx**
-- Ícone: `ScanLine` (lucide-react)
-- Placeholder vazio para futuro OCR
+### ⚠️ SITUAÇÃO ATUAL - VERDADE ABSOLUTA:
 
-### 4. **LLMComponent.tsx**
-- Ícone: `Brain` (lucide-react)
-- Placeholder vazio para futuro gerenciador LLM
+#### DatabaseModule (Base de Dados):
+- **Localização REAL**: `packages/@plataforma/module-database/`
+- **Localização DUPLICADA**: `modules/database/` (abandonada)
+- **Problema CRÍTICO**: TableEditorCanvas com **8,712 linhas** (95.4% monolítico)
+- **Modularização real**: Apenas 4.6% do código foi extraído (~400 linhas)
+- **Duplicação**: 8,711 linhas duplicadas desnecessariamente
 
-### 5. **TerminalComponent.tsx**
-- Ícone: `Terminal` (lucide-react)
-- Placeholder vazio para futuro terminal IA
+#### Outros Módulos:
+- **Sistema**: Apenas uma página em `client/pages/SistemaModule.tsx`
+- **Marketplace**: Placeholder vazio em `modules/marketplace/`
+- **Vendas**: Placeholder vazio em `modules/vendas/`
+- **Demais 16 módulos**: NÃO EXISTEM
+
+#### Module Registry System:
+- **Localização**: `client/lib/moduleRegistry.ts`
+- **Status**: ❌ QUEBRADO (DynamicModuleLoader comentado para debug)
+- **Problema**: Imports hardcoded, não funciona dinamicamente
+
+
+## 📦 Module Registry System (NOVO!)
+
+### Como funciona:
+O sistema agora usa carregamento dinâmico de módulos através do Module Registry.
+
+#### Configuração de um módulo:
+```typescript
+// Em client/lib/moduleRegistry.ts
+{
+  id: 'database',
+  name: 'Base de Dados',
+  icon: 'Database',
+  component: '@plataforma/module-database',  // Package externo
+  category: 'core',
+  lazy: true,                                // Lazy loading
+  packageModule: true                        // Indica que é um package
+}
+```
+
+#### Carregamento no App.tsx:
+```tsx
+// Carregamento dinâmico via DynamicModuleLoader
+<Route path="/database/*" element={
+  <ProtectedRoute>
+    <DynamicModuleLoader moduleId="database" />
+  </ProtectedRoute>
+} />
+```
+
+#### Import do módulo:
+```typescript
+// O Module Registry tenta carregar assim:
+if (config.id === 'database') {
+  const { DatabaseModule } = await import('@plataforma/module-database');
+  return { default: DatabaseModule };
+}
+```
 
 ## 💾 Sistema de Database
 
@@ -380,25 +432,361 @@ taskkill /PID [numero] /F  # Windows
 
 ## 📁 Estrutura do Projeto
 
+### Arquitetura Híbrida Atual:
+
 ```
-plataforma.app/
-├── client/
-│   ├── components/
-│   │   ├── ia/              # 5 componentes de IA
-│   │   ├── ui/              # Design System
-│   │   └── windows/         # Sistema de janelas
-│   ├── pages/
-│   │   ├── *Module.tsx      # 22 módulos
-│   │   └── windows/         # Janelas especializadas
-│   └── lib/
-│       ├── design-system.ts
-│       └── module-colors.ts
-├── server/
+plataforma.dev/
+├── 📦 packages/@plataforma/         # Módulos como packages NPM
+│   └── module-database/             # Módulo Database
+│       ├── package.json
+│       ├── src/components/
+│       │   ├── DatabaseModule.tsx
+│       │   ├── TableEditorCanvas.tsx
+│       │   └── table-editor/modules/
+│       └── index.ts
+│
+├── 🖥️ client/                       # Frontend da aplicação
+│   ├── components/ui/               # Design System global
+│   ├── pages/                       # Módulos em formato page
+│   │   ├── SistemaModule.tsx
+│   │   ├── MarketplaceModule.tsx
+│   │   └── PlatformDashboardFixed.tsx
+│   ├── lib/
+│   │   ├── moduleRegistry.ts        # Sistema de registro de módulos
+│   │   └── module-colors.ts
+│   └── App.tsx                      # Roteamento principal
+│
+├── 🔧 server/                       # Backend da aplicação
 │   └── routes/
-│       ├── postgres-direct.ts
-│       └── auth.ts
-└── vite.config.ts           # Porta 3030 configurada aqui
+│       ├── postgres-direct.ts      # API PostgreSQL
+│       └── auth.ts                  # Autenticação
+│
+└── ⚙️ vite.config.ts               # Configuração (porta 3030)
 ```
+
+### Padrões de Estrutura:
+
+**Módulos como Packages** (recomendado para novos módulos):
+- Localização: `packages/@plataforma/module-[nome]/`
+- Carregamento: Module Registry com lazy loading
+- Isolamento: Package independente com próprias dependências
+
+**Módulos como Pages** (estrutura atual):
+- Localização: `client/pages/[Nome]Module.tsx`
+- Carregamento: Import direto via React Router
+- Integração: Direta com o core da aplicação
+
+## 📁 Estrutura GitHub - Múltiplos Repositórios
+
+A Plataforma OS está organizada em múltiplos repositórios especializados:
+
+### 🔓 Repositórios Públicos:
+
+#### 1. **[plataforma-os-docs](https://github.com/betofilippi/plataforma-os-docs)**
+- **Função**: Documentação oficial completa
+- **Conteúdo**: Arquitetura, APIs, guias de desenvolvimento
+- **Tags**: `documentation`, `architecture`, `guides`, `api-docs`
+
+#### 2. **[plataforma-os-sdk](https://github.com/betofilippi/plataforma-os-sdk)** 
+- **Função**: SDK oficial para desenvolvimento de módulos
+- **Conteúdo**: Ferramentas, utilitários, APIs cliente
+- **Tags**: `sdk`, `api`, `development`, `public`
+
+#### 3. **[plataforma-template-basic](https://github.com/betofilippi/plataforma-template-basic)**
+- **Função**: Template básico para novos módulos
+- **Conteúdo**: Setup mínimo com funcionalidade core
+- **Tags**: `template`, `basic`, `starter`, `development`
+
+#### 4. **[plataforma-template-business](https://github.com/betofilippi/plataforma-template-business)**
+- **Função**: Template para módulos empresariais
+- **Conteúdo**: Features enterprise com integração database
+- **Tags**: `template`, `enterprise`, `business`, `database`
+
+#### 5. **[plataforma-template-ai](https://github.com/betofilippi/plataforma-template-ai)**
+- **Função**: Template para módulos com IA
+- **Conteúdo**: Padrões de integração ML e AI
+- **Tags**: `template`, `machine-learning`, `ai`, `artificial-intelligence`
+
+### 🔒 Repositórios Privados:
+
+#### 1. **plataforma-os-core** (Privado)
+- **Função**: Monorepo principal do sistema
+- **Conteúdo**: Core services, window system, framework
+- **Tags**: `monorepo`, `enterprise`, `framework`, `window-system`
+
+#### 2. **plataforma-module-producao** (Privado)
+- **Função**: Sistema de produção/build/deployment da plataforma
+- **Conteúdo**: Manufacturing, assembly, production pipeline
+- **Tags**: `production`, `manufacturing`, `assembly`, `deployment`
+- **Nota**: NÃO é um módulo da aplicação, é infraestrutura de produção
+
+### ⚠️ IMPORTANTE: Módulos da Aplicação
+
+**Os módulos da aplicação (Database, Sistema, Marketplace) NÃO têm repositórios próprios no GitHub.**
+
+- **Database**: Localizado em `packages/@plataforma/module-database/` (repo local)
+- **Sistema**: Localizado em `client/pages/SistemaModule.tsx` (repo local)
+- **Marketplace**: Localizado em `client/pages/MarketplaceModule.tsx` (repo local)
+
+Todos os módulos estão atualmente no repositório principal, não em repos separados.
+
+### 📦 Como os Repositórios se Integram:
+
+```mermaid
+graph TD
+    Core[plataforma-os-core] --> SDK[plataforma-os-sdk]
+    SDK --> Templates[Templates]
+    Templates --> Basic[template-basic]
+    Templates --> Business[template-business]
+    Templates --> AI[template-ai]
+    SDK --> Modules[Módulos Locais]
+    Core --> Docs[plataforma-os-docs]
+    Core --> Producao[plataforma-module-producao]
+```
+
+## 🚀 Guia para Desenvolvimento de Módulos
+
+### Como Criar um Novo Módulo
+
+#### Opção 1: Usando Templates Oficiais (RECOMENDADO)
+
+**1. Clonar o template apropriado:**
+```bash
+# Para módulo básico
+git clone https://github.com/betofilippi/plataforma-template-basic my-module
+
+# Para módulo empresarial
+git clone https://github.com/betofilippi/plataforma-template-business my-module
+
+# Para módulo com IA
+git clone https://github.com/betofilippi/plataforma-template-ai my-module
+```
+
+**2. Instalar SDK oficial:**
+```bash
+cd my-module
+npm install plataforma-os-sdk
+```
+
+**3. Configurar o módulo:**
+```json
+{
+  "name": "@plataforma/module-[nome]",
+  "version": "1.0.0",
+  "dependencies": {
+    "plataforma-os-sdk": "latest",
+    "@mui/icons-material": "^5.15.10",
+    "lucide-react": "^0.321.0"
+  }
+}
+```
+
+**3. Estrutura de arquivos obrigatória:**
+```
+module-[nome]/
+├── package.json
+├── src/
+│   ├── components/
+│   │   ├── [Nome]Module.tsx     # Componente principal
+│   │   └── index.ts
+│   ├── hooks/                   # Custom hooks
+│   ├── services/                # APIs e lógica de negócio
+│   ├── types/                   # TypeScript interfaces
+│   └── index.ts                 # Export principal
+├── tsconfig.json
+└── vite.config.ts
+```
+
+**4. Componente principal template:**
+```tsx
+// src/components/[Nome]Module.tsx
+import { WindowCard, WindowButton } from '@/components/ui';
+import { [Icone] } from '@mui/icons-material';
+
+export default function [Nome]Module() {
+  return (
+    <div className="p-6">
+      <WindowCard title="Módulo [Nome]">
+        <div className="flex items-center space-x-2 mb-4">
+          <[Icone] className="w-6 h-6" />
+          <h2 className="text-xl font-semibold">Bem-vindo ao [Nome]</h2>
+        </div>
+        
+        <p className="text-gray-600 mb-4">
+          Descrição da funcionalidade do módulo.
+        </p>
+        
+        <WindowButton variant="primary">
+          Ação Principal
+        </WindowButton>
+      </WindowCard>
+    </div>
+  );
+}
+```
+
+**5. Registrar no Module Registry:**
+```typescript
+// Em client/lib/moduleRegistry.ts
+{
+  id: '[nome]',
+  name: '[Nome do Módulo]',
+  icon: '[Icone]',
+  component: '@plataforma/module-[nome]',
+  category: 'business', // ou 'admin', 'support', 'core'
+  lazy: true,
+  packageModule: true,
+  description: 'Descrição do módulo'
+}
+```
+
+**6. Adicionar rota no App.tsx:**
+```tsx
+// Em client/App.tsx
+<Route path="/[nome]/*" element={
+  <ProtectedRoute>
+    <DynamicModuleLoader moduleId="[nome]" />
+  </ProtectedRoute>
+} />
+```
+
+#### Opção 2: Módulo como Page (Simples)
+
+**1. Criar arquivo do módulo:**
+```tsx
+// client/pages/[Nome]Module.tsx
+import { WindowCard } from '@/components/ui';
+
+export default function [Nome]Module() {
+  return (
+    <WindowCard title="[Nome] Module">
+      {/* Conteúdo do módulo */}
+    </WindowCard>
+  );
+}
+```
+
+**2. Registrar rota direta:**
+```tsx
+// Em client/App.tsx  
+const [Nome]Module = lazy(() => import("./pages/[Nome]Module"));
+
+<Route path="/[nome]" element={
+  <ProtectedRoute>
+    <Suspense fallback={<Loading />}>
+      <[Nome]Module />
+    </Suspense>
+  </ProtectedRoute>
+} />
+```
+
+### 🔧 SDK Oficial - plataforma-os-sdk
+
+O SDK oficial está disponível em: [github.com/betofilippi/plataforma-os-sdk](https://github.com/betofilippi/plataforma-os-sdk)
+
+#### Instalação:
+```bash
+npm install plataforma-os-sdk
+# ou
+yarn add plataforma-os-sdk
+```
+
+#### Principais Features do SDK:
+
+```typescript
+import { 
+  // Core Components
+  ModuleProvider,      // Provider para contexto do módulo
+  ModuleContainer,     // Container padrão para módulos
+  
+  // Hooks
+  useModule,          // Hook para acessar contexto do módulo
+  useModuleData,      // Hook para dados do módulo
+  useModuleAPI,       // Hook para API do módulo
+  
+  // Utils
+  createModule,       // Factory para criar módulos
+  registerModule,     // Registrar módulo no sistema
+  
+  // Types
+  ModuleConfig,       // Interface de configuração
+  ModuleContext       // Contexto do módulo
+} from 'plataforma-os-sdk';
+```
+
+#### Exemplo de Uso do SDK:
+
+```tsx
+import { createModule, ModuleProvider } from 'plataforma-os-sdk';
+
+const MyModule = createModule({
+  id: 'my-module',
+  name: 'Meu Módulo',
+  version: '1.0.0',
+  dependencies: ['database', 'auth'],
+  
+  setup() {
+    // Inicialização do módulo
+  },
+  
+  render() {
+    return (
+      <ModuleProvider>
+        <MyModuleContent />
+      </ModuleProvider>
+    );
+  }
+});
+```
+
+### Ferramentas Complementares
+
+#### Design System (disponível no core)
+```tsx
+import { 
+  WindowCard,      // Container principal
+  WindowButton,    // Botões padronizados
+  WindowInput,     // Inputs com estilo
+  WindowToggle,    // Toggle switches
+  WindowSelect     // Select dropdowns
+} from '@/components/ui';
+```
+
+#### APIs e Utilities (via SDK)
+```tsx
+import { 
+  api,               // Cliente HTTP configurado
+  supabase,          // Cliente Supabase
+  getModuleColor     // Cores do módulo
+} from 'plataforma-os-sdk/utils';
+```
+
+### Boas Práticas para Módulos
+
+#### 1. **Estrutura Consistente**
+- Use sempre WindowCard como container principal
+- Siga o padrão de cores da plataforma
+- Implemente loading states com Suspense
+
+#### 2. **Integração com a Plataforma**
+- Use os hooks disponíveis para estado global
+- Integre com o sistema de autenticação
+- Utilize as APIs padronizadas
+
+#### 3. **Performance**
+- Implemente lazy loading para componentes pesados
+- Use React.memo para componentes que re-renderizam muito
+- Minimize dependencies do package
+
+#### 4. **Acessibilidade**
+- Use ARIA labels apropriadas
+- Implemente navegação por teclado
+- Mantenha contraste adequado
+
+#### 5. **Testes**
+- Escreva testes unitários para lógica de negócio
+- Teste integração com a plataforma
+- Valide performance em diferentes cenários
 
 ## 🏗️ GUIA DE MODULARIZAÇÃO DE COMPONENTES
 
@@ -587,16 +975,18 @@ export default function ComponentName() {
 - Estado muito complexo
 - Funciona perfeitamente
 
-### 🎯 Exemplo Prático: TableEditorCanvas
+### 🚨 REALIDADE: TableEditorCanvas NÃO FOI MODULARIZADO!
 
-**Antes**: 5.635 linhas em um arquivo
-**Meta**: ~1.000 linhas no principal + módulos
+**SITUAÇÃO REAL:**
+- **Arquivo atual**: 8,712 linhas em um único arquivo
+- **Meta documentada**: < 500 linhas no principal
+- **Realidade**: 8,712 linhas = **17x MAIOR** que deveria ser!
 
-**Progresso:**
-- ✅ Fase 1: Types extraídos (0 quebras)
-- ✅ Fase 1: Helpers extraídos (0 quebras)
-- 🚧 Fase 2: Ícones e constantes (próximo)
-- ⏳ Fase 3: Hooks e componentes (futuro)
+**"PROGRESSO" FALSO:**
+- ❌ **Não foi modularizado** - apenas ~400 linhas extraídas
+- ❌ **92% do código** ainda está no arquivo monolítico  
+- ❌ **Continua impossível de manter**
+- ❌ **Pior que antes** - agora está em package mas ainda gigante
 
 ### 💡 EXEMPLOS PRÁTICOS DE MODULARIZAÇÃO
 
@@ -697,61 +1087,6 @@ Se alguma resposta for NÃO, PARE e modularize ANTES de continuar!
 - [ ] Commits frequentes
 - [ ] Documentação atualizada
 
-## 📦 REGRA FUNDAMENTAL: ISOLAMENTO MODULAR COMPLETO
-
-### ⚠️ TODOS os componentes DEVEM estar dentro de seus respectivos módulos
-
-**ESTRUTURA OBRIGATÓRIA**:
-```
-/modulos/[nome_modulo]/componentes/
-```
-
-**EXEMPLOS CORRETOS**:
-- ✅ TableEditor: `/modulos/base_de_dados/componentes/table_editor/`
-- ✅ Auth: `/modulos/sistema/componentes/auth/`
-- ✅ IA Components: `/modulos/inteligencia_artificial/componentes/[componente]/`
-
-**PROIBIDO**:
-- ❌ Componentes em `/client/components/[modulo]/`
-- ❌ Componentes compartilhados sem módulo definido
-- ❌ Duplicação de componentes em múltiplos locais
-- ❌ Componentes de módulo fora da pasta `/modulos/`
-
-**IMPORTS CORRETOS**:
-```typescript
-// Usar paths absolutos com alias @
-import { TableEditor } from '@/modulos/base_de_dados/componentes/table_editor';
-import { AuthComponent } from '@/modulos/sistema/componentes/auth';
-import { IAComponent } from '@/modulos/inteligencia_artificial/componentes/[componente]';
-```
-
-**EXCEÇÕES - Apenas componentes VERDADEIRAMENTE globais**:
-Apenas em `/client/components/ui/`:
-- WindowCard, WindowButton, WindowInput (Design System)
-- Toast, Dialog, Alert (UI primitivos)
-- ContextMenu, Tooltip (Componentes base)
-
-**ESTRUTURA COMPLETA DE UM MÓDULO**:
-```
-/modulos/[nome_modulo]/
-├── componentes/       # TODOS os componentes do módulo
-├── hooks/            # Hooks específicos do módulo
-├── utils/            # Utilidades do módulo
-├── services/         # APIs e serviços do módulo
-├── types/            # Types e interfaces do módulo
-├── config.json       # Configuração do módulo
-├── permissions.json  # Permissões do módulo
-└── README.md         # Documentação do módulo
-```
-
-**PROCESSO DE MIGRAÇÃO**:
-1. Identificar componente e módulo dono
-2. Criar estrutura em `/modulos/[modulo]/componentes/`
-3. Mover arquivos para novo local
-4. Atualizar TODOS os imports
-5. Remover pasta/arquivos antigos
-6. Testar funcionamento
-7. Commit com mensagem clara: "refactor: move [componente] to modular structure"
 
 ## ⚠️ Regras Críticas
 
@@ -790,17 +1125,6 @@ className="backdrop-blur-xl border-r border-white/10"
 - Porta frontend está em `vite.config.ts` linha 10
 - Se mudar, atualize este documento
 
-## 📁 Estrutura GitHub
-
-### Organização dos Repositórios
-- **Repositório Principal**: `betofilippi/plataforma.app` (este repo)
-- **Módulos**: Cada módulo tem seu próprio repositório
-  - Ex: `betofilippi/inteligencia_artificial`, `betofilippi/vendas`
-- **Componentes**: São subdiretórios dentro dos repos dos módulos
-  - Ex: `inteligencia_artificial/mcp_manager/`
-
-### Documentação da Estrutura
-Veja [GITHUB_STRUCTURE.md](GITHUB_STRUCTURE.md) para detalhes completos da organização no GitHub.
 
 ## 🔧 Desenvolvimento
 
@@ -829,38 +1153,84 @@ NODE_ENV=development
 
 ## 💡 Dicas para Assistentes IA
 
-1. **Projeto está funcionando** - Não "conserte" o que não está quebrado
-2. **Use componentes existentes** - WindowCard, WindowButton, etc.
-3. **Teste na porta correta** - Sempre verifique qual porta o Vite alocou
-4. **Login é demo** - adm@nxt.eco.br com qualquer senha
-5. **Erros de token são normais** - Sistema de auth funcionando
-6. **Glassmorphism obrigatório** - Em todas as sidebars
-7. **20 módulos prontos** - Não precisa criar novos, apenas melhorar
-8. **5 componentes IA vazios** - Apenas ícones placeholder por enquanto
-9. **Database integrado** - Não é módulo separado
-10. **Estrutura GitHub** - Veja GITHUB_STRUCTURE.md para organização dos repos
+1. **Sistema funcional** - Use os módulos e componentes existentes
+2. **Design System** - Sempre use WindowCard, WindowButton, etc.
+3. **Porta 3030** - Servidor configurado para esta porta
+4. **Login demo** - adm@nxt.eco.br com qualquer senha
+5. **Module Registry** - Use o guia para criar novos módulos
+6. **SDK disponível** - Hooks e utilitários documentados
+7. **Arquitetura híbrida** - Packages + Pages conforme necessidade
+8. **Glassmorphism** - Padrão visual obrigatório
+9. **Lazy loading** - Para performance otimizada
+10. **Estrutura única** - Tudo em um repositório
 
 ## 📊 Status Atual do Projeto
 
 ### ✅ Funcionando
 - Sistema de janelas flutuantes
-- 20 módulos implementados
-- 5 componentes de IA (apenas ícones vazios)
-- Database com glassmorphism
+- 3 módulos principais (Database, Sistema, Marketplace)
+- Module Registry com lazy loading
+- Database editor visual PostgreSQL
 - Autenticação demo
 - Design System completo
 
 ### 🚧 Em Desenvolvimento
-- Integração com Grist Core
-- MCP Bridge completo
-- Persistência de janelas
+- Modularização real do TableEditorCanvas (8,712 linhas)
+- Migração de módulos para packages
+- Expansão do SDK para desenvolvedores
 
-### 📝 Backlog
+### 📝 Próximos Passos
+- Implementar novos módulos usando o guia
+- Completar sistema de plugins
 - Deploy em produção
-- Autenticação real
-- WebSockets para real-time
+
+## 🔴 PROBLEMAS CONHECIDOS (26/08/2025)
+
+### 1. TableEditorCanvas NÃO está modularizado
+- **Arquivo**: `packages/@plataforma/module-database/src/components/TableEditorCanvas.tsx`
+- **Problema**: 8,712 linhas em um único arquivo (deveria ter < 500)
+- **Impacto**: Impossível de manter, dificulta colaboração
+- **Solução necessária**: Extrair componentes, hooks e lógica para módulos separados
+
+### 2. Module Registry com problemas de importação
+- **Problema**: Import dinâmico de packages não funciona consistentemente
+- **Workaround atual**: Hardcoded para database module
+- **Solução necessária**: Implementar sistema de build para packages
+
+### 3. Componentes de IA deletados
+- **Problema**: Componentes foram removidos de `client/components/ia/`
+- **Impacto**: Funcionalidade de IA não existe
+- **Solução necessária**: Recriar em package separado
+
+### 4. Estrutura inconsistente
+- **Problema**: DatabaseModule em package, outros módulos ainda em client/pages
+- **Impacto**: Arquitetura híbrida confusa
+- **Solução necessária**: Migrar todos os módulos para packages
+
+## ✅ PRÓXIMOS PASSOS PRIORITÁRIOS
+
+1. **URGENTE**: Modularizar TableEditorCanvas de verdade
+   - Extrair componentes visuais (Header, Grid, Cells)
+   - Extrair hooks (useTableState, useTableEvents)
+   - Extrair services (DataService, FormulaEngine)
+
+2. **IMPORTANTE**: Corrigir Module Registry
+   - Implementar build system para packages
+   - Resolver importação dinâmica
+
+3. **NECESSÁRIO**: Completar migração modular
+   - Mover todos os módulos para packages
+   - Padronizar estrutura
 
 ---
 
-**ÚLTIMA ATUALIZAÇÃO**: 26/08/2025 - Adicionadas INSTRUÇÕES OBRIGATÓRIAS DE MODULARIZAÇÃO - Todos novos componentes devem nascer modularizados seguindo estrutura do TableEditorCanvas
-**ATUALIZAÇÃO ANTERIOR**: 23/08/2025 - Adicionada REGRA FUNDAMENTAL DE ISOLAMENTO MODULAR COMPLETO - Todos componentes devem estar em /modulos/[nome_modulo]/componentes/
+**ÚLTIMA ATUALIZAÇÃO**: 26/08/2025 - CLAUDE.md COMPLETAMENTE REVISADO para eliminar todas as contradições e informações obsoletas. Adicionado guia completo para desenvolvimento de novos módulos com SDK e boas práticas.
+
+**MUDANÇAS NESTA VERSÃO:**
+- ✅ Removidas contradições sobre módulos existentes vs inexistentes  
+- ✅ Eliminadas referências a componentes IA deletados
+- ✅ Consolidada estrutura do projeto em seção única
+- ✅ Adicionado guia instrutivo completo para novos módulos
+- ✅ Documentado SDK e ferramentas disponíveis
+- ✅ Removidas duplicações e seções obsoletas
+- ✅ Atualizado status real do projeto

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Diagnostic - Check Main App</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #222; color: #0f0; }
+        .log { padding: 5px; margin: 2px 0; background: #333; border-left: 3px solid #0f0; }
+        .error { border-left-color: #f00; color: #f00; }
+        .success { border-left-color: #0f0; color: #0f0; }
+        .warning { border-left-color: #fa0; color: #fa0; }
+        iframe { width: 100%; height: 400px; border: 2px solid #0f0; }
+    </style>
+</head>
+<body>
+    <h1>Live Diagnostic - React Mount Issue</h1>
+    <div id="log-container"></div>
+    <hr>
+    <h2>Main App in iFrame (to isolate errors):</h2>
+    <iframe id="test-frame" src="/"></iframe>
+    <hr>
+    <button onclick="runTest()">Run Manual Test</button>
+
+    <script>
+        const logContainer = document.getElementById('log-container');
+        
+        function log(message, type = 'log') {
+            console.log(message);
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        log('Diagnostic page loaded', 'success');
+        
+        // Monitor iframe loading
+        const iframe = document.getElementById('test-frame');
+        iframe.onload = function() {
+            log('Main app iframe loaded', 'success');
+            
+            try {
+                const iframeDoc = iframe.contentDocument;
+                const root = iframeDoc.getElementById('root');
+                
+                if (root) {
+                    log(`Root element found in iframe. Children: ${root.children.length}`, 'success');
+                    if (root.children.length === 0) {
+                        log('Root element is EMPTY - React not mounting', 'error');
+                    } else {
+                        log('Root element has content - React is working!', 'success');
+                    }
+                } else {
+                    log('Root element NOT found in iframe', 'error');
+                }
+                
+                // Check for errors in iframe
+                iframe.contentWindow.addEventListener('error', (e) => {
+                    log(`IFRAME ERROR: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+                });
+                
+                // Override console in iframe to capture logs
+                const iframeConsole = iframe.contentWindow.console;
+                iframe.contentWindow.console.log = function(...args) {
+                    log(`IFRAME LOG: ${args.join(' ')}`, 'success');
+                    iframeConsole.log.apply(iframeConsole, args);
+                };
+                
+                iframe.contentWindow.console.error = function(...args) {
+                    log(`IFRAME ERROR: ${args.join(' ')}`, 'error');
+                    iframeConsole.error.apply(iframeConsole, args);
+                };
+                
+            } catch (e) {
+                log(`Error accessing iframe: ${e.message}`, 'error');
+            }
+        };
+        
+        iframe.onerror = function() {
+            log('Main app iframe failed to load', 'error');
+        };
+        
+        // Manual test function
+        function runTest() {
+            log('Running manual React test...', 'warning');
+            
+            // Try to load React modules directly
+            import('/node_modules/.vite/deps/react.js')
+                .then(React => {
+                    log('React module loaded successfully', 'success');
+                    return import('/node_modules/react-dom/client.js');
+                })
+                .then(ReactDOM => {
+                    log('ReactDOM module loaded successfully', 'success');
+                    
+                    // Create test element
+                    const testDiv = document.createElement('div');
+                    testDiv.id = 'manual-test-root';
+                    testDiv.style.cssText = 'border: 2px solid #0f0; padding: 10px; margin: 10px 0; background: #333;';
+                    document.body.appendChild(testDiv);
+                    
+                    // Try to mount React
+                    const root = ReactDOM.createRoot(testDiv);
+                    const element = React.createElement('div', {
+                        style: { color: '#0f0' }
+                    }, 'Manual React test successful!');
+                    
+                    root.render(element);
+                    log('Manual React test completed - check element above', 'success');
+                })
+                .catch(error => {
+                    log(`Manual test failed: ${error.message}`, 'error');
+                });
+        }
+    </script>
+</body>
+</html>

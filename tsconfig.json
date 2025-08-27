@@ -35,6 +35,7 @@
       "@plataforma/core-window-system": ["./packages/core-window-system/src"],
       "@plataforma/design-system": ["./packages/design-system/src"],
       "@plataforma/auth-system": ["./packages/auth-system/src"],
+      "@plataforma/module-database": ["./packages/@plataforma/module-database/src"],
       "@plataforma/sdk": ["./packages/sdk/src"]
     }
   },

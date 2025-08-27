@@ -15,7 +15,7 @@ import {
 } from "@/components/windows";
 import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/components/ui';
 import { FileExplorer } from './windows/FileExplorer';
-import TableEditorWithSchema from './windows/TableEditorWithSchema';
+import { TableEditorWithSchema } from '@plataforma/module-database';
 import { getModuleColor } from '@/lib/module-colors';
 import DocumentExplorerReal from '@/components/DocumentExplorerReal';
 
