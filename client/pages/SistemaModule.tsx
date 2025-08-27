@@ -12,12 +12,10 @@ import {
   WindowSelect, 
   WindowToggle 
 } from '@/components/ui';
-import { LayoutDashboard as LayoutIcon, Grid3x3 as PanelIcon, Table2 as TableIcon, Folder as FolderIcon, FileText as DocumentsIcon, Table2 as TableEditorIcon } from "lucide-react";
+import { LayoutDashboard as LayoutIcon } from "lucide-react";
 import WindowTemplate from '@/components/windows/WindowTemplate';
-import TaskbarTemplate from '@/components/windows/TaskbarTemplate';
 import { TablesTemplate } from './windows/TablesTemplate';
 import { FileExplorer } from './windows/FileExplorer';
-import { TableEditorWithSchema } from '@plataforma/module-database';
 import { STANDARD_ICON_CLASSES } from '@/lib/constants/icon-sizes';
 import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/components/ui';
 import { getModuleColor } from '@/lib/module-colors';
@@ -100,27 +98,7 @@ function SistemaDesktopContent() {
     );
   };
 
-  const handleOpenTaskbarTemplate = () => {
-    createWindow(
-      'Template da Taskbar - Padrão de Implementação',
-      <TaskbarTemplate />,
-      {
-        size: { width: 1100, height: 750 },
-        position: { x: 100, y: 30 }
-      }
-    );
-  };
 
-  const handleOpenTablesTemplate = () => {
-    createWindow(
-      'Template de Tabelas - Padrão Visual',
-      <TablesTemplate />,
-      {
-        size: { width: 1400, height: 900 },
-        position: { x: 50, y: 30 }
-      }
-    );
-  };
 
   return (
     <div className="absolute inset-0" style={{ background: "#1f2937" }}>
@@ -138,96 +116,7 @@ function SistemaDesktopContent() {
             onClick={handleOpenTemplate}
           />
           
-          {/* Template da Taskbar Icon */}
-          <ModuleIcon
-            module={{
-              id: "template-taskbar",
-              name: "TEMPLATE DA TASKBAR",
-              icon: PanelIcon,
-              color: getModuleColor('sistema').gradient,
-            }}
-            onClick={handleOpenTaskbarTemplate}
-          />
           
-          {/* Template de Tabelas Icon */}
-          <ModuleIcon
-            module={{
-              id: "template-tabelas",
-              name: "TEMPLATE DE TABELAS",
-              icon: TableIcon,
-              color: getModuleColor('sistema').gradient,
-            }}
-            onClick={handleOpenTablesTemplate}
-          />
-          
-          {/* Diretório Icon */}
-          <ModuleIcon
-            module={{
-              id: "diretorio",
-              name: "DIRETÓRIOS",
-              icon: FolderIcon,
-              color: getModuleColor('sistema').gradient,
-            }}
-            onClick={() => {
-              createWindow(
-                'Diretórios - Sistema',
-                <FileExplorer 
-                  initialPath={rootPath}
-                  title="Diretório - Sistema"
-                />,
-                {
-                  size: { width: 1000, height: 700 },
-                  position: { x: 100, y: 50 }
-                }
-              );
-            }}
-          />
-          
-          {/* Documentos Icon */}
-          <ModuleIcon
-            module={{
-              id: "documentos",
-              name: "DOCUMENTOS",
-              icon: DocumentsIcon,
-              color: getModuleColor('sistema').gradient,
-            }}
-            onClick={() => {
-              createWindow(
-                'Documentos - Sistema',
-                <DocumentExplorerReal 
-                  moduleId="sistema"
-                  initialPath="/documents"
-                  allowUpload={true}
-                  allowDelete={true}
-                  viewMode="grid"
-                />,
-                {
-                  size: { width: 1000, height: 700 },
-                  position: { x: 150, y: 100 }
-                }
-              );
-            }}
-          />
-          
-          {/* Tabelas Icon - Acesso restrito ao schema sistema */}
-          <ModuleIcon
-            module={{
-              id: "tabelas-editor",
-              name: "TABELAS",
-              icon: TableEditorIcon,
-              color: getModuleColor('sistema').gradient
-            }}
-            onClick={() => {
-              createWindow(
-                'Tabelas - Sistema',
-                <TableEditorWithSchema schemaFilter="sistema" />,
-                {
-                  size: { width: 1400, height: 900 },
-                  position: { x: 50, y: 30 }
-                }
-              );
-            }}
-          />
         </div>
       </div>
     </div>

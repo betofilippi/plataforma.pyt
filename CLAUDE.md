@@ -1,680 +1,332 @@
-# CLAUDE.md - Plataforma OS Enterprise Documentation
+# CLAUDE.md - Instruções para Assistentes IA
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg) ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg) ![License](https://img.shields.io/badge/license-Enterprise-orange.svg) ![TypeScript](https://img.shields.io/badge/TypeScript-99%25-blue.svg) ![Modules](https://img.shields.io/badge/modules-20+-purple.svg)
+Este arquivo contém instruções essenciais para qualquer assistente Claude (ou outro LLM) trabalhando neste projeto.
 
----
+# ⚠️ REGRAS RÍGIDAS DE POSTURA - LEIA PRIMEIRO!
 
-## 📊 Project Statistics
+## PRODUTIVIDADE E HONESTIDADE ABSOLUTA
 
-| **Metric** | **Value** |
-|------------|-----------|
-| **Active Modules** | 20+ enterprise modules |
-| **Lines of Code** | 250,000+ LOC |
-| **UI Components** | 180+ reusable components |
-| **API Endpoints** | 150+ RESTful endpoints |
-| **Test Coverage** | 85%+ |
-| **Performance Score** | 95+ Lighthouse |
-| **Concurrent Users** | 1,000+ supported |
+### 1. SEM MENTIRAS OU DECLARAÇÕES FALSAS
+- ❌ **NUNCA** declarar "sucesso", "funcionou" ou "pronto" sem verificar
+- ❌ **NUNCA** dizer "fiz X" se não fez
+- ❌ **NUNCA** fingir que algo está funcionando quando não está
+- ✅ Sempre verificar se a mudança realmente funcionou antes de afirmar algo
 
----
+### 2. ADMITIR LIMITAÇÕES IMEDIATAMENTE
+- Se **NÃO SABE** fazer algo → Diga "NÃO SEI"
+- Se **NÃO CONSEGUE** resolver → Diga "NÃO CONSIGO"
+- Se **PRECISA** de ajuda → Peça ajuda ou sugira alternativas
+- **NÃO** fique girando em círculos tentando parecer competente
 
-## 🚀 Project Overview
+### 3. PROIBIDO MOCK DE DADOS E INVENÇÃO DE MÓDULOS
+- ❌ **NUNCA** criar dados falsos ou simulados sem autorização explícita
+- ❌ **NUNCA** inventar módulos que não existem
+- ❌ **NUNCA** simular funcionalidades que não existem
+- ✅ Usar apenas dados reais do sistema
 
-### Executive Summary
+### 4. COMUNICAÇÃO DIRETA
+- **SIM é SIM, NÃO é NÃO**
+- Sem enrolação ou textos desnecessários
+- Ir direto ao ponto
+- Se algo está quebrado → Diga "ESTÁ QUEBRADO"
+- Se não vê mudança → Diga "NÃO MUDOU"
 
-**Plataforma OS** is a next-generation virtual enterprise operating system that revolutionizes the digital work experience. Combining the familiarity of a traditional desktop with the power of cloud computing, we deliver a complete integrated work environment that runs entirely in the browser.
+### 5. FOCO EM RESULTADOS REAIS
+- Testar antes de declarar conclusão
+- Verificar se o problema foi **REALMENTE** resolvido
+- Não assumir que funcionou - **CONFIRMAR** que funcionou
+- Se o usuário diz que não mudou, **ACREDITE** e investigue
 
-### Key Features
+### 6. QUANDO ERRAR
+- Admitir o erro **IMEDIATAMENTE**
+- Não tentar esconder, minimizar ou justificar
+- Focar em como corrigir, não em parecer competente
+- Se quebrou algo → Admita que quebrou
 
-- 🖥️ **Virtual Desktop**: Native OS experience with floating windows, multitasking, and application management
-- 🧩 **Advanced Modular Architecture**: 20+ specialized modules with hot-swapping and lazy loading
-- 💾 **Integrated Visual Database**: PostgreSQL visual editor with Excel-like interface
-- 🎨 **Enterprise Design System**: Glassmorphism UI with 180+ standardized components
-- 🔒 **Enterprise Security**: Multi-factor authentication, RBAC, and complete auditing
-- ⚡ **Optimized Performance**: <3s load time with intelligent caching and global CDN
+### 7. PRESERVAÇÃO DO CÓDIGO
+- **NUNCA** remover funcionalidades sem autorização explícita
+- **NUNCA** simplificar código funcionando sem pedido direto
+- **SEMPRE** preservar o que está funcionando
+- Em caso de dúvida → **PERGUNTE** antes de mudar
 
----
+### 8. DEBUG OBRIGATÓRIO APÓS MUDANÇAS
+- ✅ **SEMPRE** executar debug-system.html após qualquer mudança de código
+- ✅ **NUNCA** declarar tarefa concluída sem passar TODOS os testes do debug
+- ✅ **CONTINUAR** corrigindo erros até debug passar 100%
+- ✅ **REPORTAR** resultado do debug ao usuário com detalhes
+- 📍 Debug disponível em: `http://localhost:3030/debug-system.html`
+- ⚠️ Se houver erros no debug → **CORRIGIR** antes de finalizar
+- ⚠️ Se debug não carregar → Verificar servidor e porta
 
-## 🏛️ Technical Architecture
-
-### Micro-Frontend Modular Architecture
-
-```typescript
-interface ModuleConfig {
-  id: string;
-  name: string;
-  version: string;
-  dependencies: string[];
-  lazy: boolean;
-  permissions: Permission[];
-  endpoints: APIEndpoint[];
-}
-```
-
-### Application Layers
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PRESENTATION LAYER                       │
-├─────────────────────────────────────────────────────────────┤
-│  Window Manager  │  Module Renderer  │  Design System      │
-├─────────────────────────────────────────────────────────────┤
-│                     BUSINESS LAYER                          │
-├─────────────────────────────────────────────────────────────┤
-│  Module Registry │  Service Layer    │  State Management   │
-├─────────────────────────────────────────────────────────────┤
-│                      DATA LAYER                             │
-├─────────────────────────────────────────────────────────────┤
-│  PostgreSQL      │  API Gateway      │  External Services  │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 💻 Technology Stack
-
-### Frontend
-- **Framework**: React 18.2+ with TypeScript 5.0+
-- **Build Tool**: Vite 4.4+ 
-- **State**: Zustand + TanStack Query
-- **Styling**: TailwindCSS 3.3+ with Glassmorphism
-- **UI Components**: Material-UI + Lucide React
-
-### Backend
-- **Runtime**: Node.js 18.17+
-- **Framework**: Express.js 4.18+
-- **Database**: PostgreSQL 15+ via Supabase
-- **Cache**: Redis 7.0+
-- **Auth**: Supabase Auth with JWT
-
-### DevOps
-- **Version Control**: Git + GitHub
-- **CI/CD**: GitHub Actions
-- **Containerization**: Docker + Compose
-- **Monitoring**: Sentry + LogRocket
-
----
-
-## 🏢 Enterprise Module System
-
-### Core Modules (5)
-
-| Module | Component | Description |
-|--------|-----------|-------------|
-| **Database** | `@plataforma/module-database` | Visual PostgreSQL editor |
-| **System** | `@plataforma/module-system` | System configuration |
-| **Auth** | `@plataforma/module-auth` | Authentication & authorization |
-| **Files** | `@plataforma/module-files` | File management |
-| **Settings** | `@plataforma/module-settings` | User preferences |
-
-### Business Modules (10)
-
-| Module | Component | Description |
-|--------|-----------|-------------|
-| **CRM** | `@plataforma/module-crm` | Customer relationship management |
-| **ERP** | `@plataforma/module-erp` | Enterprise resource planning |
-| **Sales** | `@plataforma/module-sales` | Sales management |
-| **Finance** | `@plataforma/module-finance` | Financial management |
-| **HR** | `@plataforma/module-hr` | Human resources |
-| **Inventory** | `@plataforma/module-inventory` | Stock control |
-| **Marketing** | `@plataforma/module-marketing` | Marketing automation |
-| **Production** | `@plataforma/module-production` | Production management |
-| **Logistics** | `@plataforma/module-logistics` | Supply chain |
-| **BI** | `@plataforma/module-bi` | Business intelligence |
-
-### Administrative Modules (3)
-
-| Module | Component | Description |
-|--------|-----------|-------------|
-| **Users** | `@plataforma/module-users` | User management |
-| **Reports** | `@plataforma/module-reports` | Report generation |
-| **Audit** | `@plataforma/module-audit` | System auditing |
-
-### Support Modules (3)
-
-| Module | Component | Description |
-|--------|-----------|-------------|
-| **AI Assistant** | `@plataforma/module-ai` | AI-powered assistance |
-| **Marketplace** | `@plataforma/module-marketplace` | Module marketplace |
-| **Automation** | `@plataforma/module-automation` | Workflow automation |
-
----
-
-## 🔌 APIs and Integrations
-
-### REST API
-```typescript
-// Core endpoints
-GET  /api/system/info
-GET  /api/system/health
-GET  /api/database/schemas
-POST /api/database/query
-
-// Business endpoints
-GET  /api/crm/contacts
-POST /api/sales/orders
-GET  /api/finance/reports
-```
-
-### WebSocket Events
-```typescript
-// Real-time events
-'database:table_updated'
-'crm:contact_created'
-'sales:order_paid'
-'system:notification'
-```
-
-### GraphQL Schema
-```graphql
-type Query {
-  systemInfo: SystemInfo!
-  contacts(search: String): [Contact!]!
-  dashboardData: DashboardData!
-}
-
-type Mutation {
-  createContact(input: ContactInput!): Contact!
-  updateOrder(id: ID!, status: OrderStatus!): Order!
-}
-
-type Subscription {
-  contactUpdated: Contact!
-  orderCreated: Order!
-}
-```
-
----
-
-## 🛠️ Development Guide
-
-### Creating a New Module
-
-1. **Generate module structure**:
+**PROCESSO DE DEBUG OBRIGATÓRIO**:
 ```bash
-npx plataforma-cli create-module my-module
+1. Fazer mudanças no código
+2. Abrir http://localhost:3030/debug-system.html
+3. Aguardar todos os 24 testes executarem
+4. Se houver erros → Corrigir e repetir desde o passo 2
+5. Só finalizar quando TODOS os testes passarem
 ```
 
-2. **Module structure**:
-```
-packages/@plataforma/module-my-module/
-├── src/
-│   ├── components/
-│   │   └── MyModule.tsx
-│   ├── hooks/
-│   ├── services/
-│   └── index.ts
-├── package.json
-└── tsconfig.json
-```
+### 9. PRESERVAÇÃO DA SESSÃO DO CLAUDE CODE CLI
+- ❌ **NUNCA** usar `taskkill /IM node.exe` ou comandos que matem TODOS os processos Node
+- ❌ **NUNCA** fechar processos sem identificar o PID específico
+- ✅ **SEMPRE** usar PID específico: `taskkill /PID [numero] /F`
+- ✅ **SEMPRE** verificar qual processo está usando a porta: `netstat -ano | findstr :3030`
+- ⚠️ **LEMBRE-SE**: Claude Code CLI roda em Node.js - matar todos os Node fecha a sessão!
 
-3. **Register the module**:
-```typescript
-// client/lib/moduleRegistry.ts
-{
-  id: 'my-module',
-  name: 'My Module',
-  component: '@plataforma/module-my-module',
-  category: 'business',
-  lazy: true
-}
+**COMANDOS SEGUROS**:
+```bash
+# Ver qual processo usa a porta
+netstat -ano | findstr :3030
+
+# Matar apenas o processo específico
+taskkill /PID 12345 /F
+
+# NUNCA USE:
+# taskkill /IM node.exe (mata TODOS os Node incluindo Claude Code)
 ```
 
-### Using the Design System
-
-```tsx
-import { WindowCard, WindowButton } from '@/components/ui';
-
-export function MyComponent() {
-  return (
-    <WindowCard title="My Feature">
-      <WindowButton variant="primary">
-        Action
-      </WindowButton>
-    </WindowCard>
-  );
-}
-```
-
-### Database Operations
-
-```typescript
-// Using SDK
-import { plataformaSDK } from '@plataforma/sdk';
-
-const result = await plataformaSDK.database.query(
-  'SELECT * FROM module_crm.contacts WHERE active = $1',
-  [true]
-);
-
-// Using Visual Editor
-import { TableEditor } from '@plataforma/module-database';
-
-<TableEditor 
-  schema="module_crm"
-  table="contacts"
-  editable={true}
-/>
-```
+## ⛔ ESTAS REGRAS SÃO INEGOCIÁVEIS!
+**Violação destas regras = Perda total de confiança do usuário**
 
 ---
 
-## 🔧 Development Tools
+## 🎯 Visão Geral do Projeto
 
-### Available Scripts
+**Plataforma.dev** é um sistema de janelas flutuantes no navegador com editor visual de PostgreSQL. O projeto está em desenvolvimento inicial com arquitetura modular planejada.
+
+### Características Atuais:
+- 🖥️ **Sistema de Janelas**: Janelas flutuantes funcionais
+- 💾 **Editor Database**: PostgreSQL visual estilo Excel
+- 🎨 **Design System**: Glassmorphism e componentes padronizados
+- 🔐 **Auth Demo**: Login demo funcional
+
+## 🌐 PORTAS E URLS
+
+### URLs de Acesso:
+| Serviço | Porta | URL | Status |
+|---------|-------|-----|--------|
+| **Frontend** | **3030** | **http://localhost:3030** | ✅ Principal |
+| **Backend API** | **4000** | **http://localhost:4000** | ✅ API |
+
+### ⚠️ IMPORTANTE:
+- O Vite pode tentar portas alternativas (3031, 3032) se 3030 estiver ocupada
+- **SEMPRE** verifique o console para ver qual porta foi alocada
+- Use `netstat -ano | findstr 3030` para verificar se a porta está livre
+
+## 🚀 Como Iniciar o Projeto
 
 ```bash
-# Development
-npm run dev              # Start development server
-npm run dev:server       # Start backend only
-npm run dev:client       # Start frontend only
+# 1. Instalar dependências
+npm install
 
-# Building
-npm run build           # Production build
-npm run preview         # Preview production build
+# 2. Iniciar desenvolvimento (Frontend + Backend)
+npm run dev
 
-# Testing
-npm run test           # Run unit tests
-npm run test:e2e       # Run E2E tests
-npm run test:coverage  # Generate coverage report
+# 3. Acessar no navegador
+http://localhost:3030
 
-# Code Quality
-npm run lint          # Lint code
-npm run format        # Format with Prettier
-npm run type-check    # TypeScript checking
+# 4. Login demo (qualquer senha funciona)
+Email: adm@nxt.eco.br
+Senha: (qualquer uma)
 ```
 
-### Debug Tools
+## 📦 STATUS REAL DOS MÓDULOS (VERDADE ABSOLUTA)
 
-Access debug panel at: `http://localhost:3030/debug`
+### ✅ O QUE REALMENTE EXISTE:
 
-```typescript
-// Enable debug mode
-localStorage.setItem('DEBUG_MODE', 'true');
+#### 1. **Database Module**
+- **Localização**: `packages/@plataforma/module-database/`
+- **Status**: ❌ **NÃO MODULARIZADO** (8,712 linhas em TableEditorCanvas.tsx)
+- **Problema CRÍTICO**: 95.4% do código ainda em arquivo monolítico
+- **Funcionalidade**: Editor visual PostgreSQL funcional mas não modularizado
 
-// View module registry
-console.log(moduleRegistry.getAllModules());
+#### 2. **Sistema Module**
+- **Localização**: `client/pages/SistemaModule.tsx`
+- **Status**: ✅ Página básica funcional
+- **Conteúdo**: Layout com ícones, não é um módulo real
 
-// Check window state
-console.log(windowManager.getWindows());
-```
+#### 3. **Marketplace Module**
+- **Localização**: `client/pages/MarketplaceModule.tsx` (se existir)
+- **Status**: ❓ Página básica ou placeholder
 
----
+### ❌ O QUE NÃO EXISTE:
+- **Módulos de negócio**: Vendas, RH, Financeiro, Estoque, etc. (TODOS são placeholders vazios)
+- **Módulos administrativos**: Users, Reports, Audit (NÃO EXISTEM)
+- **Módulos AI**: Removidos, não existem mais
+- **SDK**: Não existe ainda
+- **Templates**: Não existem
+- **Repositórios separados**: Todos os módulos estão no repo principal
 
-## 📁 Project Structure
+### 📌 REALIDADE BRUTAL:
+- **Módulos prometidos na documentação anterior**: 20+
+- **Módulos realmente funcionais**: 0.5 (Database parcial)
+- **Module Registry**: Funciona apenas para Database (hardcoded)
+- **Modularização**: FALHOU - apenas 4.6% do código foi extraído
+
+## 📁 Estrutura REAL do Projeto
 
 ```
 plataforma.dev/
-├── 📦 packages/@plataforma/       # Module packages
-│   ├── module-database/
-│   ├── module-crm/
-│   └── ...20+ modules
+├── 📦 packages/@plataforma/         # Apenas 1 módulo
+│   └── module-database/             # Database (NÃO modularizado)
+│       └── src/components/
+│           └── TableEditorCanvas.tsx  # 8,712 linhas!!!
 │
-├── 🖥️ client/                     # Frontend application
-│   ├── components/
-│   │   ├── ui/                   # Design system
-│   │   └── windows/              # Window system
+├── 🖥️ client/                       # Frontend
+│   ├── components/ui/               # Design System (existe)
+│   ├── pages/                       # Páginas básicas
+│   │   ├── SistemaModule.tsx        # Página simples
+│   │   └── PlatformDashboardFixed.tsx
 │   ├── lib/
-│   │   ├── moduleRegistry.ts
-│   │   └── windowManager.ts
-│   ├── pages/
-│   └── App.tsx
+│   │   └── moduleRegistry.ts        # Registry básico
+│   └── App.tsx                      # Roteamento
 │
-├── 🔧 server/                     # Backend application
-│   ├── routes/
-│   │   ├── api/
-│   │   └── websocket/
-│   └── index.ts
+├── 🔧 server/                       # Backend básico
+│   └── routes/
+│       ├── postgres-direct.ts      # API PostgreSQL
+│       └── auth.ts                  # Auth demo
 │
-├── 📚 docs/                       # Documentation
-│   ├── TECH_ROADMAP_2025.md
-│   └── API_REFERENCE.md
-│
-└── ⚙️ Configuration files
-    ├── vite.config.ts
-    ├── tsconfig.json
-    └── package.json
+└── ⚙️ vite.config.ts               # Config (porta 3030)
 ```
 
----
+## 💾 Sistema de Database
 
-## 🎯 Best Practices
+### Arquitetura Real
+- **PostgreSQL** hospedado no Supabase
+- **Interface Visual** - Editor estilo Excel com glassmorphism
+- **Problema**: TableEditorCanvas com 8,712 linhas NÃO modularizadas
 
-### TypeScript Patterns
+### ⚠️ REGRA FUNDAMENTAL: Sistema TEXT + Type Hints
+- **Armazenamento (Supabase)**: TODOS os dados são salvos como **TEXT**
+- **Type Hints (Metadados)**: Definem como interpretar e renderizar os campos
+- **Interface**: Formatação rica baseada nos hints
+- **Validação**: Acontece no frontend, dados sempre aceitos no banco
 
-```typescript
-// Use strict types
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-}
-
-// Avoid 'any'
-function processData<T extends object>(data: T): T {
-  return { ...data };
-}
-
-// Use enums for constants
-enum Status {
-  PENDING = 'pending',
-  ACTIVE = 'active',
-  INACTIVE = 'inactive'
-}
+### Conexão PostgreSQL
+```javascript
+postgresql://postgres:Bdebola2025@@db.yhvtsbkotszxqndkhhhx.supabase.co:5432/postgres
 ```
 
-### React Patterns
+### APIs Disponíveis
+```
+GET  /api/postgres/tables      # Listar tabelas
+GET  /api/postgres/schemas     # Listar schemas
+POST /api/postgres/query       # Executar SQL
+GET  /api/postgres/table-data  # Dados da tabela
+```
 
+## 🎨 Design System
+
+### Componentes Disponíveis
 ```tsx
-// Use functional components
-export function Component() {
-  const [state, setState] = useState<State>();
-  
-  // Use custom hooks
-  const { data, loading } = useModuleData();
-  
-  // Memoize expensive operations
-  const result = useMemo(() => 
-    expensiveCalculation(data), [data]
-  );
-  
-  return <div>{result}</div>;
-}
+import { WindowCard, WindowButton, WindowInput, WindowToggle } from '@/components/ui';
 
-// Error boundaries
-<ErrorBoundary fallback={<ErrorFallback />}>
-  <Component />
-</ErrorBoundary>
+// Card com glassmorphism
+<WindowCard title="Título">
+  <p>Conteúdo</p>
+</WindowCard>
+
+// Botão com variantes
+<WindowButton variant="primary" icon={<Save />}>
+  Salvar
+</WindowButton>
 ```
 
-### Performance Optimization
+### Padrões Visuais
+- **Glassmorphism**: `backdrop-blur-xl bg-white/5`
+- **Transparência**: Sidebars sem background
+- **Hover**: `hover:bg-white/5`
+- **Bordas**: `border-white/10`
+- **Texto**: Títulos `text-white`, descrições `text-gray-400`
 
-```typescript
-// Lazy load modules
-const Module = lazy(() => import('@plataforma/module-crm'));
+## 🚨 PROBLEMAS CONHECIDOS (CRÍTICOS)
 
-// Use React.memo for pure components
-export const PureComponent = memo(({ data }) => {
-  return <div>{data}</div>;
-});
+### 1. TableEditorCanvas NÃO está modularizado
+- **Arquivo**: `packages/@plataforma/module-database/src/components/TableEditorCanvas.tsx`
+- **Problema**: 8,712 linhas em um único arquivo (deveria ter < 500)
+- **Impacto**: Impossível de manter
+- **Status**: FALHA TOTAL na modularização
 
-// Debounce expensive operations
-const debouncedSearch = useMemo(
-  () => debounce(search, 300),
-  [search]
-);
-```
+### 2. Module Registry limitado
+- **Problema**: Funciona apenas para Database (hardcoded)
+- **Status**: Não é um sistema modular real
 
----
+### 3. Módulos inexistentes
+- **Problema**: Documentação anterior mentia sobre 20+ módulos
+- **Realidade**: Apenas placeholders e páginas vazias
 
-## 🔒 Security Guidelines
+### 4. Sem SDK ou ferramentas
+- **Problema**: Não existe SDK para desenvolvimento
+- **Status**: Promessas não cumpridas
 
-### Authentication
-- JWT tokens with refresh mechanism
-- Multi-factor authentication support
-- Session management with Redis
+## 🔧 Desenvolvimento
 
-### Authorization
-- Role-based access control (RBAC)
-- Module-level permissions
-- Row-level security in PostgreSQL
-
-### Data Protection
-- TLS 1.3 encryption
-- Input validation and sanitization
-- SQL injection prevention
-- XSS protection
-
----
-
-## 📋 AI Assistant Guidelines
-
-### Core Principles for AI Assistants
-
-1. **Code Quality First**
-   - Always use TypeScript with proper types
-   - Follow existing patterns in the codebase
-   - Use the design system components
-   - Write clean, maintainable code
-
-2. **Module Architecture**
-   - Respect the modular structure
-   - Use lazy loading for new modules
-   - Follow the Module Registry pattern
-   - Maintain module isolation
-
-3. **Performance Awareness**
-   - Implement lazy loading
-   - Use React.memo and useMemo appropriately
-   - Optimize bundle sizes
-   - Monitor render performance
-
-4. **Security Consciousness**
-   - Never expose sensitive data
-   - Validate all inputs
-   - Use prepared statements for SQL
-   - Implement proper authentication checks
-
-5. **User Experience**
-   - Maintain consistent UI/UX
-   - Use glassmorphism design
-   - Provide loading states
-   - Handle errors gracefully
-
-### Development Workflow
-
-1. **Before Making Changes**:
-   - Understand the existing code structure
-   - Check for similar implementations
-   - Review the design system
-   - Consider performance implications
-
-2. **When Implementing Features**:
-   - Start with TypeScript interfaces
-   - Create reusable components
-   - Add proper error handling
-   - Include loading states
-
-3. **After Implementation**:
-   - Test the functionality
-   - Check for TypeScript errors
-   - Verify responsive design
-   - Update documentation if needed
-
-### Common Tasks
-
-#### Adding a New Feature
-```typescript
-// 1. Define types
-interface FeatureProps {
-  data: FeatureData;
-  onUpdate: (data: FeatureData) => void;
-}
-
-// 2. Create component
-export function Feature({ data, onUpdate }: FeatureProps) {
-  // Implementation
-}
-
-// 3. Add to module
-export { Feature } from './Feature';
-```
-
-#### Integrating with Database
-```typescript
-// Use the SDK
-const result = await sdk.database.query(
-  'SELECT * FROM table WHERE id = $1',
-  [id]
-);
-
-// Handle errors
-if (result.error) {
-  console.error('Database error:', result.error);
-  return;
-}
-```
-
-#### Creating API Endpoints
-```typescript
-// server/routes/api/feature.ts
-router.get('/api/feature/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await getFeature(id);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-```
-
----
-
-## 🚀 Technology Roadmap 2025
-
-### Q1 2025 - Foundation
-- ✅ Module system architecture
-- ✅ Design system implementation
-- ✅ Core modules development
-- 🔄 Performance optimization
-
-### Q2 2025 - Intelligence
-- 📊 **Activity Miner**: Workflow mining and automation
-- 🤖 **AI Operator**: Integrated AI assistant
-- 🧠 **RAG System**: Contextual enterprise AI
-- 📈 **Real-time Analytics**: Live dashboards
-
-### Q3 2025 - Automation
-- 🔄 **Workflow Orchestration**: Process automation
-- 📄 **Document Intelligence**: Smart document processing
-- 🚀 **Event Streaming**: Real-time synchronization
-- 🔍 **Observability Stack**: Complete monitoring
-
-### Q4 2025 - Scale
-- 🌍 **Global Distribution**: Multi-region deployment
-- 🔐 **Advanced Security**: Zero-trust architecture
-- 📱 **Mobile Support**: Responsive PWA
-- 🎯 **Enterprise Features**: Advanced customization
-
-### Emerging Technologies
-
-| Technology | Purpose | Status |
-|------------|---------|--------|
-| **Agente Operator** | AI-powered system control | 🔄 Planning |
-| **Activity Mining** | Process discovery | 🔄 Planning |
-| **Temporal Workflows** | Complex automation | 📅 Q3 2025 |
-| **Vector Database** | AI knowledge base | 📅 Q2 2025 |
-| **Edge Computing** | Local processing | 📅 Q4 2025 |
-
----
-
-## 🌐 Environment Configuration
-
-### Development Environment
-
+### Scripts NPM
 ```bash
-# .env.development
+npm run dev        # Desenvolvimento (porta 3030)
+npm run build      # Build de produção
+npm run preview    # Preview do build
+npm test           # Testes (se existirem)
+```
+
+### Variáveis de Ambiente (.env)
+```bash
+# Autenticação Demo
+DEMO_MODE=true
+
+# PostgreSQL (Supabase)
+DATABASE_URL=postgresql://...
+
+# Desenvolvimento
 NODE_ENV=development
-VITE_API_URL=http://localhost:4000
-VITE_WS_URL=ws://localhost:4000
-DATABASE_URL=postgresql://user:pass@localhost:5432/plataforma
-REDIS_URL=redis://localhost:6379
 ```
 
-### Production Environment
+## 📊 Status REAL do Projeto
 
-```bash
-# .env.production
-NODE_ENV=production
-VITE_API_URL=https://api.plataforma.dev
-VITE_WS_URL=wss://api.plataforma.dev
-DATABASE_URL=${DATABASE_URL}
-REDIS_URL=${REDIS_URL}
-```
+### ✅ O que Funciona
+- Sistema de janelas flutuantes básico
+- Database editor visual (mas não modularizado)
+- Autenticação demo
+- Design System básico
 
-### Required Ports
+### 🚧 O que NÃO Funciona
+- Modularização (falhou completamente)
+- Module Registry (limitado)
+- Múltiplos módulos (não existem)
 
-| Service | Port | Description |
-|---------|------|-------------|
-| Frontend | 3030 | Vite dev server |
-| Backend | 4000 | Express API |
-| PostgreSQL | 5432 | Database |
-| Redis | 6379 | Cache |
-| WebSocket | 4000 | Real-time |
+### ❌ O que é Mentira
+- 20+ módulos empresariais
+- Sistema modular avançado
+- SDK e ferramentas completas
+- Arquitetura enterprise
 
----
+## 💡 Dicas para Assistentes IA
 
-## 🎓 Learning Resources
+1. **NUNCA inventar módulos** - Documente apenas o que existe
+2. **Admitir problemas** - Modularização falhou
+3. **Ser honesto** - Projeto em desenvolvimento inicial
+4. **Design System** - Use WindowCard, WindowButton, etc.
+5. **Porta 3030** - Servidor configurado para esta porta
+6. **Login demo** - adm@nxt.eco.br com qualquer senha
+7. **Database funciona** - Editor visual está funcional
+8. **NÃO prometer** - Não documente funcionalidades inexistentes
 
-### Documentation
-- [Official Docs](docs/README.md)
-- [API Reference](docs/API_REFERENCE.md)
-- [Tech Roadmap](docs/TECH_ROADMAP_2025.md)
+## 🔴 PRÓXIMOS PASSOS REAIS
 
-### Key Technologies
-- [React 18 Docs](https://react.dev)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [Supabase Docs](https://supabase.io/docs)
-- [TailwindCSS](https://tailwindcss.com/docs)
-
-### Community
-- GitHub Issues for bug reports
-- Discord for discussions
-- Stack Overflow for questions
+1. **URGENTE**: Modularizar TableEditorCanvas de verdade
+2. **IMPORTANTE**: Criar módulos reais (não páginas vazias)
+3. **NECESSÁRIO**: Implementar Module Registry funcional
+4. **OPCIONAL**: Desenvolver SDK e ferramentas
 
 ---
 
-## 🤝 Contributing
+**ÚLTIMA ATUALIZAÇÃO**: 27/08/2025 - CLAUDE.md COMPLETAMENTE CORRIGIDO para refletir apenas a REALIDADE do projeto, removendo todas as mentiras sobre módulos inexistentes.
 
-### Code Standards
-1. Use TypeScript for all new code
-2. Follow ESLint and Prettier rules
-3. Write meaningful commit messages
-4. Add tests for new features
-5. Update documentation
-
-### Pull Request Process
-1. Fork the repository
-2. Create feature branch
-3. Implement changes
-4. Add tests
-5. Update documentation
-6. Submit PR with description
-
-### Commit Convention
-```
-feat: Add new feature
-fix: Fix bug
-docs: Update documentation
-style: Format code
-refactor: Refactor code
-test: Add tests
-chore: Update dependencies
-```
-
----
-
-## 📝 License
-
-Plataforma OS is proprietary software. All rights reserved.
-
-For licensing inquiries, contact: license@plataforma.dev
-
----
-
-## 🏆 Acknowledgments
-
-Built with cutting-edge technologies and best practices from the global development community.
-
-Special thanks to all contributors and the open-source community.
-
----
-
-**Last Updated**: August 27, 2025  
-**Version**: 2.0.0  
-**Status**: Production Ready
-
----
-
-*This document serves as the complete technical reference for the Plataforma OS enterprise system. For specific implementation details, refer to the inline documentation and type definitions in the codebase.*
+**MUDANÇAS NESTA VERSÃO:**
+- ✅ Removidas TODAS as mentiras sobre 20+ módulos
+- ✅ Documentada apenas a realidade: Database (não modularizado), Sistema (página)
+- ✅ Admitidos problemas reais de modularização
+- ✅ Eliminadas referências a SDK, templates e funcionalidades inexistentes
+- ✅ Status real: projeto em desenvolvimento inicial
+- ✅ Honestidade absoluta sobre o que existe vs o que não existe

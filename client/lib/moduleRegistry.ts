@@ -84,15 +84,6 @@ class ModuleRegistry {
         hotReload: true
       },
       {
-        id: 'database',
-        name: 'Base de Dados',
-        icon: 'Database',
-        component: '@plataforma/module-database',
-        category: 'core',
-        lazy: true,
-        packageModule: true
-      },
-      {
         id: 'sistema',
         name: 'Sistema',
         icon: 'Settings',
@@ -101,7 +92,7 @@ class ModuleRegistry {
         lazy: true
       },
       
-      // Módulos de Negócio  
+      // Módulos de Negócio
       {
         id: 'estoque',
         name: 'Estoque',
@@ -373,15 +364,9 @@ class ModuleRegistry {
       return lazy(async () => {
         try {
           if (config.packageModule) {
-            // Carregar de um package módulo - tratamento especial para database
-            if (config.id === 'database') {
-              // Import direto do módulo database
-              const { DatabaseModule } = await import('@plataforma/module-database');
-              return { default: DatabaseModule };
-            }
-            // Para outros package modules
+            // Para package modules
             const packageModule = await import(/* @vite-ignore */ componentPath);
-            const Component = packageModule.default || packageModule.DatabaseModule || packageModule;
+            const Component = packageModule.default || packageModule;
             return { default: Component };
           } else {
             // Tentar carregar do caminho principal (legado)
@@ -420,7 +405,7 @@ class ModuleRegistry {
       if (config.packageModule) {
         // Carregar de um package módulo
         const packageModule = await import(/* @vite-ignore */ componentPath);
-        return packageModule.default || packageModule.DatabaseModule || packageModule;
+        return packageModule.default || packageModule;
       } else {
         const module = await import(/* @vite-ignore */ componentPath);
         return module.default || module;

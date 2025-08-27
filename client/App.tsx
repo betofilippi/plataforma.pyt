@@ -38,11 +38,7 @@ const DynamicModuleLoader = ({ moduleId }: { moduleId: string }) => {
           return;
         }
         
-        // For now, hardcode database module
-        if (moduleId === 'database') {
-          const { DatabaseModule } = await import('@plataforma/module-database');
-          setComponent(() => DatabaseModule);
-        }
+        // Module loading would happen here
         setLoading(false);
       } catch (err) {
         console.error(`Failed to load module ${moduleId}:`, err);
@@ -70,13 +66,6 @@ const SistemaModule = lazy(() => {
   });
 });
 
-const MarketplaceModule = lazy(() => {
-  console.log('🔄 [LAZY] Loading MarketplaceModule...');
-  return import("./pages/MarketplaceModule").catch(err => {
-    console.error('❌ [LAZY] Failed to load MarketplaceModule:', err);
-    throw err;
-  });
-});
 
 // Regular imports
 import PlatformDashboardFixed from "./pages/PlatformDashboardFixed";
@@ -154,14 +143,6 @@ const App = () => {
                   } />
 
 
-                  {/* DATABASE - Módulo Base de Dados - Protected & Lazy loaded via Module Registry */}
-                  {/* TEMPORARIAMENTE COMENTADO PARA DEBUG 
-                  <Route path="/database/*" element={
-                    <ProtectedRoute>
-                      <DynamicModuleLoader moduleId="database" />
-                    </ProtectedRoute>
-                  } />
-                  */}
 
                   {/* SISTEMA - Módulo de Sistema - Protected & Lazy loaded */}
                   <Route path="/sistema/*" element={
@@ -179,21 +160,6 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  {/* MARKETPLACE - Marketplace de Módulos - Protected & Lazy loaded */}
-                  <Route path="/marketplace/*" element={
-                    <ProtectedRoute>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-gray-600">Carregando marketplace...</p>
-                          </div>
-                        </div>
-                      }>
-                        <MarketplaceModule />
-                      </Suspense>
-                    </ProtectedRoute>
-                  } />
 
 
 

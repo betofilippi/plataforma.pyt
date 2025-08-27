@@ -63,12 +63,6 @@ if (path.startsWith("/sistema")) {
   const modulesList = `// 📋 MÓDULOS ATUALMENTE CONFIGURADOS
 const modules = [
   {
-    path: "/database",
-    name: "BASE DE DADOS",
-    icon: Database,  // lucide-react (exceção - já existente)
-    color: "from-purple-600 to-purple-700"
-  },
-  {
     path: "/sistema",
     name: "SISTEMA",
     icon: SettingsIcon,  // lucide-react ✅

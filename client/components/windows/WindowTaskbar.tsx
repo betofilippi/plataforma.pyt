@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { 
   Grid3X3 as SpreadsheetIcon,
   Settings as SettingsIcon,
-  Database as DatabaseIcon,
   Package as EstoqueIcon,
   Wrench as MontagemIcon,
   TrendingUp as VendasIcon,
@@ -76,14 +75,6 @@ export function WindowTaskbar() {
       return null;
     }
 
-    // DATABASE module
-    if (path.startsWith("/database")) {
-      return {
-        name: "BASE DE DADOS",
-        icon: DatabaseIcon,
-        color: getModuleColor('database').primary,
-      };
-    }
 
     // SISTEMA module
     if (path.startsWith("/sistema")) {

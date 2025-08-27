@@ -1,11 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Database as DatabaseIcon,
   Settings as SistemaIcon,
-  Store as MarketplaceIcon,
-  Folder as FolderIcon,
-  FileText as DocumentsIcon,
   Table as TableIcon,
 } from "lucide-react";
 import {
@@ -15,7 +11,6 @@ import {
 } from "@/components/windows";
 import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/components/ui';
 import { FileExplorer } from './windows/FileExplorer';
-import { TableEditorWithSchema } from '@plataforma/module-database';
 import { getModuleColor } from '@/lib/module-colors';
 import DocumentExplorerReal from '@/components/DocumentExplorerReal';
 
@@ -99,28 +94,12 @@ function PlatformDashboardContent() {
   // Apenas módulos essenciais
   const essentialModules: ModuleItem[] = [
     {
-      id: "database", 
-      name: "BASE DE DADOS",
-      icon: DatabaseIcon,
-      color: getModuleColor('database').gradient,
-      href: "/database",
-      position: { x: 70, y: 150 },
-    },
-    {
       id: "sistema",
       name: "SISTEMA", 
       icon: SistemaIcon,
       color: getModuleColor('sistema').gradient,
       href: "/sistema",
       position: { x: 250, y: 150 },
-    },
-    {
-      id: "marketplace",
-      name: "MARKETPLACE", 
-      icon: MarketplaceIcon,
-      color: getModuleColor('marketplace').gradient,
-      href: "/marketplace",
-      position: { x: 430, y: 150 },
     },
   ];
 
@@ -145,107 +124,6 @@ function PlatformDashboardContent() {
           ))}
         </div>
         
-        {/* Segunda linha - Utilitários */}
-        <div className="grid grid-cols-4 gap-6 mt-8">
-          {/* Diretório Icon */}
-          <div 
-            className="group relative transition-all duration-300 cursor-pointer hover:scale-105"
-            onClick={() => {
-              createWindow(
-                'Explorador de Arquivos',
-                <FileExplorer 
-                  initialPath={rootPath}
-                  title="Explorador de Arquivos"
-                />,
-                {
-                  size: { width: 1000, height: 700 },
-                  position: { x: 100, y: 50 }
-                }
-              );
-            }}
-          >
-            <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-all duration-300 drop-shadow-2xl hover:drop-shadow-[0_20px_35px_rgba(0,0,0,0.4)]">
-              <FolderIcon
-                size={64}
-                color={getModuleColor('plataforma').primary}
-                style={{
-                  filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6)) drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
-                }}
-              />
-            </div>
-            <div className="w-44 text-center mx-auto">
-              <span className="font-semibold text-xs leading-tight drop-shadow-lg block text-white">
-                DIRETÓRIO
-              </span>
-            </div>
-          </div>
-          
-          {/* Documentos Icon */}
-          <div 
-            className="group relative transition-all duration-300 cursor-pointer hover:scale-105"
-            onClick={() => {
-              createWindow(
-                'Gerenciador de Documentos',
-                <DocumentExplorerReal 
-                  moduleId="plataforma_core"
-                  initialPath="/documents"
-                  allowUpload={true}
-                  allowDelete={true}
-                  viewMode="grid"
-                />,
-                {
-                  size: { width: 1000, height: 700 },
-                  position: { x: 150, y: 100 }
-                }
-              );
-            }}
-          >
-            <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-all duration-300 drop-shadow-2xl hover:drop-shadow-[0_20px_35px_rgba(0,0,0,0.4)]">
-              <DocumentsIcon
-                size={64}
-                color={getModuleColor('plataforma').primary}
-                style={{
-                  filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6)) drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
-                }}
-              />
-            </div>
-            <div className="w-44 text-center mx-auto">
-              <span className="font-semibold text-xs leading-tight drop-shadow-lg block text-white">
-                DOCUMENTOS
-              </span>
-            </div>
-          </div>
-          
-          {/* Tabelas Icon */}
-          <div 
-            className="group relative transition-all duration-300 cursor-pointer hover:scale-105"
-            onClick={() => {
-              createWindow(
-                'Editor de Tabelas',
-                <TableEditorWithSchema />,
-                {
-                  size: { width: 1400, height: 900 },
-                  position: { x: 50, y: 30 }
-                }
-              );
-            }}
-          >
-            <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-all duration-300 drop-shadow-2xl hover:drop-shadow-[0_20px_35px_rgba(0,0,0,0.4)]">
-              <TableIcon
-                size={64}
-                color={getModuleColor('plataforma').primary}
-                style={{
-                  filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.6)) drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
-                }}
-              />
-            </div>
-            <div className="w-44 text-center mx-auto">
-              <span className="font-semibold text-xs leading-tight drop-shadow-lg block text-white">
-                TABELAS
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
