@@ -91,11 +91,11 @@ function PlatformDashboardContent() {
   const createWindow = useCreateWindow();
   const rootPath = 'C:\\Users\\Beto\\OneDrive - NXT Indústria e Comércio Ltda\\dev\\plataforma.app';
 
-  // Apenas módulos essenciais
-  const essentialModules: ModuleItem[] = [
+  // Configurações do sistema (não é módulo)
+  const systemSettings: ModuleItem[] = [
     {
       id: "sistema",
-      name: "SISTEMA", 
+      name: "CONFIGURAÇÕES", 
       icon: SistemaIcon,
       color: getModuleColor('sistema').gradient,
       href: "/sistema",
@@ -111,11 +111,11 @@ function PlatformDashboardContent() {
 
   return (
     <div className="absolute inset-0" style={{ background: "#1f2937" }}>
-      {/* Desktop Icons Grid - Apenas módulos essenciais */}
+      {/* Desktop Icons Grid - Configurações do sistema */}
       <div className="absolute top-32 left-12">
         <div className="grid grid-cols-4 gap-6">
-          {/* Módulos principais */}
-          {essentialModules.map((module) => (
+          {/* Configurações */}
+          {systemSettings.map((module) => (
             <ModuleIcon
               key={module.id}
               module={{...module, position: { x: 0, y: 0 }}}

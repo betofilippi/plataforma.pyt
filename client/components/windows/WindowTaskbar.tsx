@@ -2,25 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useWindowManager, useCreateWindow } from "./WindowManager";
 import { useLocation, useNavigate } from "react-router-dom";
 import { 
-  Grid3X3 as SpreadsheetIcon,
-  Settings as SettingsIcon,
-  Package as EstoqueIcon,
-  Wrench as MontagemIcon,
-  TrendingUp as VendasIcon,
-  FileText as FaturamentoIcon,
-  Truck as ExpedicaoIcon,
-  Users as RHIcon,
-  Briefcase as AdministrativoIcon,
-  Headphones as SuporteIcon,
-  MessageCircle as ComunicacaoIcon,
-  Scale as JuridicoIcon,
-  Building2 as FinanceiroIcon,
-  Receipt as TributarioIcon,
-  Megaphone as MarketingIcon,
-  Package2 as ProdutosIcon,
-  Store as LojasIcon,
-  UserPlus as CadastrosIcon,
-  Brain as IAIcon
+  Settings as SettingsIcon
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getModuleColor } from "@/lib/module-colors";
@@ -75,166 +57,12 @@ export function WindowTaskbar() {
       return null;
     }
 
-
-    // SISTEMA module
+    // CONFIGURAÇÕES - NÃO É MÓDULO
     if (path.startsWith("/sistema")) {
       return {
-        name: "SISTEMA",
+        name: "CONFIGURAÇÕES",
         icon: SettingsIcon,
         color: getModuleColor('sistema').primary,
-      };
-    }
-
-    // ESTOQUE module
-    if (path.startsWith("/estoque")) {
-      return {
-        name: "ESTOQUE",
-        icon: EstoqueIcon,
-        color: getModuleColor('estoque').primary,
-      };
-    }
-
-    // MONTAGEM module
-    if (path.startsWith("/montagem")) {
-      return {
-        name: "MONTAGEM",
-        icon: MontagemIcon,
-        color: getModuleColor('montagem').primary,
-      };
-    }
-
-    // VENDAS module
-    if (path.startsWith("/vendas")) {
-      return {
-        name: "VENDAS",
-        icon: VendasIcon,
-        color: getModuleColor('vendas').primary,
-      };
-    }
-
-    // FATURAMENTO module
-    if (path.startsWith("/faturamento")) {
-      return {
-        name: "FATURAMENTO",
-        icon: FaturamentoIcon,
-        color: getModuleColor('faturamento').primary,
-      };
-    }
-
-    // EXPEDICAO module
-    if (path.startsWith("/expedicao")) {
-      return {
-        name: "EXPEDIÇÃO",
-        icon: ExpedicaoIcon,
-        color: getModuleColor('expedicao').primary,
-      };
-    }
-
-    // RH module
-    if (path.startsWith("/rh")) {
-      return {
-        name: "RECURSOS HUMANOS",
-        icon: RHIcon,
-        color: getModuleColor('rh').primary,
-      };
-    }
-
-    // ADMINISTRATIVO module
-    if (path.startsWith("/administrativo")) {
-      return {
-        name: "ADMINISTRATIVO",
-        icon: AdministrativoIcon,
-        color: getModuleColor('administrativo').primary,
-      };
-    }
-
-    // SUPORTE module
-    if (path.startsWith("/suporte")) {
-      return {
-        name: "SUPORTE",
-        icon: SuporteIcon,
-        color: getModuleColor('suporte').primary,
-      };
-    }
-
-    // COMUNICACAO module
-    if (path.startsWith("/comunicacao")) {
-      return {
-        name: "COMUNICAÇÃO",
-        icon: ComunicacaoIcon,
-        color: getModuleColor('comunicacao').primary,
-      };
-    }
-
-    // JURIDICO module
-    if (path.startsWith("/juridico")) {
-      return {
-        name: "JURÍDICO",
-        icon: JuridicoIcon,
-        color: getModuleColor('juridico').primary,
-      };
-    }
-
-    // FINANCEIRO module
-    if (path.startsWith("/financeiro")) {
-      return {
-        name: "FINANCEIRO",
-        icon: FinanceiroIcon,
-        color: getModuleColor('financeiro').primary,
-      };
-    }
-
-    // TRIBUTARIO module
-    if (path.startsWith("/tributario")) {
-      return {
-        name: "TRIBUTÁRIO",
-        icon: TributarioIcon,
-        color: getModuleColor('tributario').primary,
-      };
-    }
-
-    // MARKETING module
-    if (path.startsWith("/marketing")) {
-      return {
-        name: "MARKETING",
-        icon: MarketingIcon,
-        color: getModuleColor('marketing').primary,
-      };
-    }
-
-    // PRODUTOS module
-    if (path.startsWith("/produtos")) {
-      return {
-        name: "PRODUTOS",
-        icon: ProdutosIcon,
-        color: getModuleColor('produtos').primary,
-      };
-    }
-
-    // LOJAS module
-    if (path.startsWith("/lojas")) {
-      return {
-        name: "LOJAS",
-        icon: LojasIcon,
-        color: getModuleColor('lojas').primary,
-      };
-    }
-
-    // CADASTROS module
-    if (path.startsWith("/cadastros")) {
-      return {
-        name: "CADASTROS",
-        icon: CadastrosIcon,
-        color: getModuleColor('cadastros').primary,
-      };
-    }
-
-    // IA module
-    if (path.startsWith("/ia")) {
-      return {
-        name: "INTELIGÊNCIA ARTIFICIAL",
-        icon: IAIcon,
-        color: getModuleColor('ia').primary,
       };
     }
 
@@ -252,10 +80,6 @@ export function WindowTaskbar() {
         return FileSpreadsheet;
       case "clientes":
         return Users;
-      case "produtos":
-        return Package;
-      case "vendas":
-        return FileSpreadsheet;
       case "relatórios":
         return BarChart3;
       default:

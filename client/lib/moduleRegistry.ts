@@ -2,13 +2,8 @@
  * Module Registry System
  * Sistema dinâmico de gerenciamento de módulos para plataforma.app
  * 
- * Funcionalidades:
- * - Detecção automática de módulos instalados
- * - Lazy loading sob demanda
- * - Cache de módulos carregados
- * - Registro dinâmico de novos módulos
- * - Hot reload em desenvolvimento
- * - Sistema de fallback para módulos não encontrados
+ * ATUALMENTE VAZIO - NÃO HÁ MÓDULOS NO SISTEMA
+ * Sistema de configurações não é módulo
  */
 
 import React, { lazy, ComponentType, LazyExoticComponent } from 'react';
@@ -23,7 +18,6 @@ export interface ModuleConfig {
   dependencies?: string[];
   version?: string;
   description?: string;
-  category?: string;
   permissions?: string[];
   hotReload?: boolean;
   packageModule?: boolean; // Indica se é um módulo de package
@@ -70,172 +64,14 @@ class ModuleRegistry {
 
   /**
    * Inicializa os módulos padrão do sistema
+   * NÃO HÁ MÓDULOS - SISTEMA É APENAS CONFIGURAÇÃO
    */
   private initializeDefaultModules() {
     const defaultModules: ModuleConfig[] = [
-      // Módulos Core
-      {
-        id: 'ia',
-        name: 'Inteligência Artificial',
-        icon: 'Psychology',
-        component: '/pages/IAModule',
-        category: 'core',
-        lazy: true,
-        hotReload: true
-      },
-      {
-        id: 'sistema',
-        name: 'Sistema',
-        icon: 'Settings',
-        component: '/pages/SistemaModule',
-        category: 'core',
-        lazy: true
-      },
-      
-      // Módulos de Negócio
-      {
-        id: 'estoque',
-        name: 'Estoque',
-        icon: 'Inventory',
-        component: '/pages/EstoqueModule',
-        category: 'business',
-        lazy: true
-      },
-      {
-        id: 'montagem',
-        name: 'Montagem',
-        icon: 'Build',
-        component: '/pages/MontagemModule',
-        category: 'business',
-        lazy: true
-      },
-      {
-        id: 'vendas',
-        name: 'Vendas',
-        icon: 'Sell',
-        component: '/pages/VendasModule',
-        category: 'business',
-        lazy: true
-      },
-      {
-        id: 'faturamento',
-        name: 'Faturamento',
-        icon: 'Receipt',
-        component: '/pages/FaturamentoModule',
-        category: 'business',
-        lazy: true
-      },
-      {
-        id: 'expedicao',
-        name: 'Expedição',
-        icon: 'LocalShipping',
-        component: '/pages/ExpedicaoModule',
-        category: 'business',
-        lazy: true
-      },
-      
-      // Módulos Administrativos
-      {
-        id: 'rh',
-        name: 'RH',
-        icon: 'Group',
-        component: '/pages/RHModule',
-        category: 'administrative',
-        lazy: true
-      },
-      {
-        id: 'administrativo',
-        name: 'Administrativo',
-        icon: 'BusinessCenter',
-        component: '/pages/AdministrativoModule',
-        category: 'administrative',
-        lazy: true
-      },
-      {
-        id: 'financeiro',
-        name: 'Financeiro',
-        icon: 'AttachMoney',
-        component: '/pages/FinanceiroModule',
-        category: 'administrative',
-        lazy: true
-      },
-      {
-        id: 'juridico',
-        name: 'Jurídico',
-        icon: 'Gavel',
-        component: '/pages/JuridicoModule',
-        category: 'administrative',
-        lazy: true
-      },
-      {
-        id: 'tributario',
-        name: 'Tributário',
-        icon: 'Calculate',
-        component: '/pages/TributarioModule',
-        category: 'administrative',
-        lazy: true
-      },
-      
-      // Módulos de Suporte
-      {
-        id: 'suporte',
-        name: 'Suporte',
-        icon: 'Support',
-        component: '/pages/SuporteModule',
-        category: 'support',
-        lazy: true
-      },
-      {
-        id: 'comunicacao',
-        name: 'Comunicação',
-        icon: 'Chat',
-        component: '/pages/ComunicacaoModule',
-        category: 'support',
-        lazy: true
-      },
-      {
-        id: 'marketing',
-        name: 'Marketing',
-        icon: 'Campaign',
-        component: '/pages/MarketingModule',
-        category: 'support',
-        lazy: true
-      },
-      {
-        id: 'produtos',
-        name: 'Produtos',
-        icon: 'Inventory2',
-        component: '/pages/ProdutosModule',
-        category: 'support',
-        lazy: true
-      },
-      {
-        id: 'lojas',
-        name: 'Lojas',
-        icon: 'Store',
-        component: '/pages/LojasModule',
-        category: 'support',
-        lazy: true
-      },
-      {
-        id: 'cadastros',
-        name: 'Cadastros',
-        icon: 'PersonAdd',
-        component: '/pages/CadastrosModule',
-        category: 'support',
-        lazy: true
-      },
-      {
-        id: 'notificacoes',
-        name: 'Notificações',
-        icon: 'Notifications',
-        component: '/pages/NotificacoesModule',
-        category: 'support',
-        lazy: true
-      }
+      // NENHUM MÓDULO - REGISTRY VAZIO
     ];
 
-    // Registrar todos os módulos padrão
+    // Registrar todos os módulos padrão (nenhum)
     defaultModules.forEach(config => {
       this.moduleConfigs.set(config.id, config);
     });
@@ -369,7 +205,7 @@ class ModuleRegistry {
             const Component = packageModule.default || packageModule;
             return { default: Component };
           } else {
-            // Tentar carregar do caminho principal (legado)
+            // Tentar carregar do caminho principal
             const module = await import(/* @vite-ignore */ componentPath);
             return { default: module.default || module };
           }
@@ -377,7 +213,7 @@ class ModuleRegistry {
           console.warn(`⚠️ Failed to load from ${componentPath}, trying fallback paths...`);
           
           if (!config.packageModule) {
-            // Tentar caminhos alternativos apenas para módulos legados
+            // Tentar caminhos alternativos
             const fallbackPaths = [
               `/client${componentPath}`,
               `/src${componentPath}`,
@@ -465,13 +301,6 @@ class ModuleRegistry {
   }
 
   /**
-   * Lista módulos por categoria
-   */
-  getModulesByCategory(category: string): ModuleConfig[] {
-    return this.getAllModules().filter(module => module.category === category);
-  }
-
-  /**
    * Lista módulos carregados
    */
   getLoadedModules(): LoadedModule[] {
@@ -530,8 +359,7 @@ class ModuleRegistry {
       loadedModules,
       errorModules,
       loadingModules,
-      cacheSize: this.cache.size,
-      categories: [...new Set(this.getAllModules().map(m => m.category))].filter(Boolean)
+      cacheSize: this.cache.size
     };
   }
 }

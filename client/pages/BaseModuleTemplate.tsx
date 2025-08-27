@@ -377,7 +377,6 @@ function DesktopInterface() {
         type: "app",
         position: { x: 270, y: 200 },
         isInstalled: true,
-        category: "core",
         isActive: true,
       },
       {

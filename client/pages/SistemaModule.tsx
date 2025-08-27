@@ -21,7 +21,7 @@ import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/
 import { getModuleColor } from '@/lib/module-colors';
 import DocumentExplorerReal from '@/components/DocumentExplorerReal';
 
-// Module icon component with Material-UI icons
+// Configuration icon component with Material-UI icons
 function ModuleIcon({
   module,
   onClick,
