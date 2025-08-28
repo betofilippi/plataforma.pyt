@@ -2,12 +2,6 @@
   "name": "plataforma-app",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*",
-    "packages/@plataforma/*",
-    "apps/*",
-    "modules/*"
-  ],
   "pkg": {
     "assets": [
       "dist/spa/*"
@@ -67,7 +61,6 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@plataforma/module-database": "^1.0.0",
     "@anthropic-ai/sdk": "^0.60.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
