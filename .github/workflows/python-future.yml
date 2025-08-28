@@ -1,0 +1,21 @@
+name: Python Migration Status
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  status:
+    name: Migration Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Migration Status
+        run: |
+          echo "🐍 Este repositório será migrado para Python"
+          echo "📦 Versão atual: TypeScript/React"
+          echo "🎯 Versão futura: Python/PyQt/FastAPI"
+          echo "✅ Status: Aguardando início da migração"
