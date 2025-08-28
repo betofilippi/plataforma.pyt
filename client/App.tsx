@@ -5,10 +5,12 @@ if (typeof window !== "undefined" && !window["_fs_namespace"]) {
   window["_fs_namespace"] = "FS";
 }
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// Temporarily removed - causing issues
+// import { Toaster } from "@/components/ui/toaster";
+// import { Toaster as Sonner } from "@/components/ui/sonner";
+// import { TooltipProvider } from "@/components/ui/tooltip";
+// TEMPORARILY REMOVED - Causing useEffect null error
+// import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { MainLayout } from "./components/MainLayout";
@@ -20,9 +22,9 @@ import Index from "./pages/Index";
 import { lazy, Suspense, useState, useEffect } from "react";
 import { moduleRegistry } from "./lib/moduleRegistry";
 
-// Performance monitoring
-import PerformanceDashboard from "./components/ui/PerformanceDashboard";
-import { usePerformanceTracking } from "./lib/performance-utils";
+// Performance monitoring - COMMENTED OUT FOR STABILITY
+// import PerformanceDashboard from "./components/ui/PerformanceDashboard";
+// import { usePerformanceTracking } from "./lib/performance-utils";
 
 // Debug logging
 console.log('🎨 [APP.TSX] App component loading...');
@@ -54,7 +56,7 @@ const DynamicModuleLoader = ({ moduleId }: { moduleId: string }) => {
     loadModule();
   }, [moduleId]);
 
-  if (loading) return <div>Loading module...</div>;
+  if (loading) return null;
   if (error) return <div>Error loading module: {error}</div>;
   if (!Component) return <div>Module not found</div>;
   
@@ -95,49 +97,36 @@ const UserProfile = lazy(() => {
   });
 });
 
-const ModuleFederationDemo = lazy(() => {
-  console.log('🔄 [LAZY] Loading ModuleFederationDemo...');
-  return import("./components/ModuleFederationDemo").catch(err => {
-    console.error('❌ [LAZY] Failed to load ModuleFederationDemo:', err);
-    throw err;
-  });
-});
+// Demos removed - keeping only real functionality
 
-const ModuleRegistryDemo = lazy(() => {
-  console.log('🔄 [LAZY] Loading ModuleRegistryDemo...');
-  return import("./pages/ModuleRegistryDemo").catch(err => {
-    console.error('❌ [LAZY] Failed to load ModuleRegistryDemo:', err);
-    throw err;
-  });
-});
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: (failureCount, error) => {
-        console.warn(`🔄 Query retry ${failureCount}:`, error);
-        return failureCount < 3;
-      },
-    },
-  },
-});
+// TEMPORARILY REMOVED - QueryClient causing issues
+// const queryClient = new QueryClient({
+//   defaultOptions: {
+//     queries: {
+//       retry: (failureCount, error) => {
+//         console.warn(`🔄 Query retry ${failureCount}:`, error);
+//         return failureCount < 3;
+//       },
+//     },
+//   },
+// });
 
 console.log('🎯 [APP] All components loaded, creating App...');
 
 const App = () => {
   console.log('🎨 [APP.TSX] App component rendering...');
-  usePerformanceTracking('App');
+  // usePerformanceTracking('App'); // Commented out for stability
   
-  const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(
-    process.env.NODE_ENV === 'development'
-  );
+  // const [showPerformanceDashboard, setShowPerformanceDashboard] = useState(
+  //   process.env.NODE_ENV === 'development'
+  // ); // Commented out for stability
   
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
+      {/* QueryClientProvider temporarily removed */}
+        {/* TooltipProvider temporarily removed */}
+          {/* Toaster temporarily removed */}
+          {/* Sonner temporarily removed */}
           <BrowserRouter>
             <AuthProvider>
               <PermissionProvider>
@@ -164,14 +153,7 @@ const App = () => {
                   {/* SISTEMA - Módulo de Sistema - Protected & Lazy loaded */}
                   <Route path="/sistema/*" element={
                     <ProtectedRoute>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-gray-600">Carregando sistema...</p>
-                          </div>
-                        </div>
-                      }>
+                      <Suspense fallback={null}>
                         <SistemaModule />
                       </Suspense>
                     </ProtectedRoute>
@@ -183,14 +165,7 @@ const App = () => {
                   {/* PERMISSION MANAGEMENT - Admin Only */}
                   <Route path="/admin/permissions" element={
                     <ProtectedRoute>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-gray-600">Carregando gerenciamento de permissões...</p>
-                          </div>
-                        </div>
-                      }>
+                      <Suspense fallback={null}>
                         <PermissionManagement />
                       </Suspense>
                     </ProtectedRoute>
@@ -200,14 +175,7 @@ const App = () => {
                   {/* USER PROFILE - Protected */}
                   <Route path="/profile" element={
                     <ProtectedRoute>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-gray-600">Carregando perfil...</p>
-                          </div>
-                        </div>
-                      }>
+                      <Suspense fallback={null}>
                         <UserProfile />
                       </Suspense>
                     </ProtectedRoute>
@@ -220,37 +188,7 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  {/* MODULE FEDERATION DEMO - Protected - For development and testing */}
-                  <Route path="/module-federation" element={
-                    <ProtectedRoute requiredRole={['admin', 'developer']}>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-gray-600">Carregando Module Federation Demo...</p>
-                          </div>
-                        </div>
-                      }>
-                        <ModuleFederationDemo />
-                      </Suspense>
-                    </ProtectedRoute>
-                  } />
-
-                  {/* MODULE REGISTRY DEMO - Protected - For development and testing */}
-                  <Route path="/module-registry-demo" element={
-                    <ProtectedRoute requiredRole={['admin', 'developer']}>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="flex flex-col items-center space-y-4">
-                            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                            <p className="text-gray-600">Carregando Module Registry Demo...</p>
-                          </div>
-                        </div>
-                      }>
-                        <ModuleRegistryDemo />
-                      </Suspense>
-                    </ProtectedRoute>
-                  } />
+                  {/* Demos removed - no fake functionality */}
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
@@ -260,15 +198,15 @@ const App = () => {
             </AuthProvider>
           </BrowserRouter>
           
-          {/* Performance Dashboard - Only in development */}
-          {process.env.NODE_ENV === 'development' && (
+          {/* Performance Dashboard - COMMENTED OUT FOR STABILITY */}
+          {/* {process.env.NODE_ENV === 'development' && (
             <PerformanceDashboard 
               isExpanded={showPerformanceDashboard}
               onToggle={setShowPerformanceDashboard}
             />
-          )}
-        </TooltipProvider>
-      </QueryClientProvider>
+          )} */}
+        {/* TooltipProvider closing tag removed */}
+      {/* QueryClientProvider closing tag removed */}
     </ErrorBoundary>
   );
 };

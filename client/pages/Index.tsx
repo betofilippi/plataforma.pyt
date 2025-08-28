@@ -21,13 +21,6 @@ export default function Index() {
     }
   }, [user, isAuthenticated, navigate]);
 
-  // Mostra loading enquanto verifica autenticação
-  return (
-    <div className="flex items-center justify-center h-screen bg-gray-900">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-gray-400">Verificando autenticação...</p>
-      </div>
-    </div>
-  );
+  // Retorna null enquanto redireciona (sem loader visual)
+  return null;
 }

@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { performanceMonitor } from './performance-utils';
+// import { performanceMonitor } from './performance-utils'; // Removido para evitar dependência circular
 
 // Interfaces para memory management
 export interface MemoryEntry {

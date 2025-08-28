@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react';
-import { WindowManagerProvider, WindowDesktop, useWindowManager } from '../WindowManager';
+import { WindowManagerProvider, useWindowManager } from '../WindowManager';
 import { windowFactory, WindowConfig, WindowInstance, useWindowFactory } from './WindowFactory';
 import { Settings, Grid3x3, FileText, BarChart3, Users, Package } from 'lucide-react';
 
@@ -129,7 +129,7 @@ function DesktopIconComponent({ icon, moduleColor, onDoubleClick }: DesktopIconC
 // COMPONENTE MODULE DESKTOP
 // ============================================================================
 
-export function ModuleDesktop({ config }: { config: ModuleDesktopConfig }) {
+export function ModuleDesktop({ config, children }: { config: ModuleDesktopConfig; children?: React.ReactNode }) {
   const { createWindow: createWindowManager } = useWindowManager();
   const { createFromTemplate, createWindow } = useWindowFactory();
   const [windows, setWindows] = useState<WindowInstance[]>([]);
@@ -196,10 +196,10 @@ export function ModuleDesktop({ config }: { config: ModuleDesktopConfig }) {
   // Criar janela a partir de template
   const handleCreateFromTemplate = useCallback((
     templateId: string, 
-    config: Partial<WindowConfig>
+    windowConfig: Partial<WindowConfig>
   ) => {
     const finalConfig: Partial<WindowConfig> = {
-      ...config,
+      ...windowConfig,
       moduleId: config.moduleId
     };
     
@@ -318,6 +318,9 @@ export function ModuleDesktop({ config }: { config: ModuleDesktopConfig }) {
             )}
           </div>
         </div>
+        
+        {/* Render children content */}
+        {children}
       </div>
     </ModuleDesktopContext.Provider>
   );
@@ -327,7 +330,7 @@ export function ModuleDesktop({ config }: { config: ModuleDesktopConfig }) {
 // WRAPPER COM WINDOW MANAGER
 // ============================================================================
 
-export function ModuleDesktopWithManager({ config }: { config: ModuleDesktopConfig }) {
+export function ModuleDesktopWithManager({ config, children }: { config: ModuleDesktopConfig; children?: React.ReactNode }) {
   // Cada módulo tem seu próprio WindowManager isolado
   return (
     <WindowManagerProvider>
@@ -336,7 +339,9 @@ export function ModuleDesktopWithManager({ config }: { config: ModuleDesktopConf
         backgroundColor="transparent"
         disableContextMenu={!config.enableContextMenu}
       >
-        <ModuleDesktop config={config} />
+        <ModuleDesktop config={config}>
+          {children}
+        </ModuleDesktop>
       </WindowDesktop>
     </WindowManagerProvider>
   );

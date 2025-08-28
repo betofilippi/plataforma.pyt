@@ -7,6 +7,11 @@
     <title>Plataforma OS - Enterprise Virtual Operating System</title>
     <meta name="description" content="Sistema operacional empresarial virtual com arquitetura modular avançada" />
     
+    <!-- FORCE NO CACHE - PREVENT OLD LOADERS -->
+    <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="0" />
+    
     <!-- Preload critical resources -->
     <link rel="preload" href="/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
     
@@ -26,69 +31,33 @@
   <body>
     <div id="root"></div>
     
-    <!-- Loading Screen -->
-    <div id="loading-screen" style="
-      position: fixed; 
-      top: 0; left: 0; 
-      width: 100%; height: 100%; 
-      background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      z-index: 9999;
-      transition: opacity 0.5s ease-out;
-    ">
-      <div style="text-align: center; color: white;">
-        <div style="
-          width: 60px; 
-          height: 60px; 
-          border: 3px solid #333; 
-          border-top: 3px solid #6366f1; 
-          border-radius: 50%; 
-          animation: spin 1s linear infinite; 
-          margin: 0 auto 20px;
-        "></div>
-        <h2 style="margin: 0; font-family: -apple-system, sans-serif;">Plataforma OS</h2>
-        <p style="margin: 10px 0 0; opacity: 0.7; font-family: -apple-system, sans-serif;">Carregando sistema operacional...</p>
-      </div>
-    </div>
+    <!-- Loading screen REMOVED - was blocking view of real errors -->
     
-    <style>
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      
-      /* Hide loading screen when app loads */
-      .app-loaded #loading-screen {
-        opacity: 0;
-        pointer-events: none;
-      }
-    </style>
+    <!-- Service Worker DISABLED - could be caching old content -->
+    <!-- Script removed intentionally to avoid caching issues -->
     
+    <!-- Force unregister all service workers to prevent caching -->
     <script>
-      // Remove loading screen when React app loads
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          document.body.classList.add('app-loaded');
-          setTimeout(() => {
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) loadingScreen.remove();
-          }, 500);
-        }, 1000);
-      });
-      
-      // Service Worker Registration (if available)
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => console.log('SW registered'))
-            .catch(error => console.log('SW registration failed'));
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('Service Worker unregistered:', registration);
+          }
+        });
+      }
+      // Clear all caches
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            caches.delete(name);
+            console.log('Cache deleted:', name);
+          });
         });
       }
     </script>
     
-    <!-- React App Entry Point -->
+    <!-- React App Entry Point - SIMPLE AND DIRECT -->
     <script type="module" src="/client/main.tsx"></script>
   </body>
 </html>

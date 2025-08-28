@@ -29,16 +29,9 @@ export function ProtectedRoute({
     clearError();
   }, [clearError]);
 
-  // Show loading spinner while checking authentication
+  // Return null while checking authentication (no visual loader)
   if (isLoading && showLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">Verificando autenticação...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   // Redirect to login if not authenticated
@@ -197,13 +190,9 @@ interface GuestOnlyProps {
 export function GuestOnly({ children, redirectTo = '/platform' }: GuestOnlyProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Show loading state
+  // Return null while loading (no visual loader)
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return null;
   }
 
   // Redirect if authenticated

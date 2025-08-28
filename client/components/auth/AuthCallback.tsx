@@ -106,16 +106,7 @@ export function AuthCallback() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <WindowCard title="Autenticando...">
-          <div className="flex flex-col items-center space-y-4 p-8">
-            <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
-            <p className="text-gray-300">Processando seu login...</p>
-          </div>
-        </WindowCard>
-      </div>
-    );
+    return null; // No visual loader
   }
 
   if (error) {

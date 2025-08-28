@@ -226,17 +226,10 @@ function LoginModal({
             disabled={isLoading || !isValid}
             className="w-full py-3 bg-gradient-to-r from-purple-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Entrando...</span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center space-x-2">
-                <span>Entrar com Email</span>
-                <ArrowRight className="w-5 h-5" />
-              </div>
-            )}
+            <div className="flex items-center justify-center space-x-2">
+              <span>Entrar com Email</span>
+              <ArrowRight className="w-5 h-5" />
+            </div>
           </Button>
 
           {/* Demo Notice */}
