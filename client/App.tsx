@@ -76,6 +76,7 @@ const SistemaModule = lazy(() => {
 // Regular imports
 import PlatformDashboardFixed from "./pages/PlatformDashboardFixed";
 import Login from "./pages/Login";
+import EmailVerification from "./pages/EmailVerification";
 import { AuthCallback } from "./components/auth/AuthCallback";
 import BaseModuleTemplate from "./pages/BaseModuleTemplate";
 import NotFound from "./pages/NotFound";
@@ -137,6 +138,10 @@ const App = () => {
                   
                   {/* LOGIN ROUTE - Without GuestOnly wrapper */}
                   <Route path="/login" element={<Login />} />
+                  
+                  {/* EMAIL VERIFICATION - Public route */}
+                  <Route path="/verify-email/:token" element={<EmailVerification />} />
+                  <Route path="/verify-email" element={<EmailVerification />} />
                   
                   {/* AUTH CALLBACK - Public route for OAuth */}
                   <Route path="/auth/callback" element={<AuthCallback />} />

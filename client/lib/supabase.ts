@@ -1,16 +1,15 @@
 /**
  * Supabase Client Configuration
- * Acesso direto ao banco de dados via SDK
+ * Acesso direto ao banco de dados via SDK - Project kblvviunzleurqlskeab
  */
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase credentials
-const SUPABASE_URL = 'https://yhvtsbkotszxqndkhhhx.supabase.co';
-// Using service_role key for full access (in production, keep this server-side only!)
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlodnRzYmtvdHN6eHFuZGtoaGh4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTkyMjI4NywiZXhwIjoyMDY1NDk4Mjg3fQ.Th-2FJSbwJPZmDrF9qWYGxmigIUvymNP_TCQMIuQ_Ac';
+// Supabase credentials from environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://kblvviunzleurqlskeab.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibHZ2aXVuemxldXJxbHNrZWFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1NzYwMzIsImV4cCI6MjA3MDE1MjAzMn0.lP8QJeDoIrg3GDR7vTuf6sLmn4hnpN4SeWppw_tgTm4';
 
-// Create Supabase client with service role for full access
-export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+// Create Supabase client with anon key for secure access
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -28,7 +27,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
 
 // Helper to switch schema
 export const useSchema = (schema: string) => {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     db: {
       schema,
     },

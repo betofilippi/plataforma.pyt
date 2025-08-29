@@ -1,0 +1,297 @@
+# ==============================================================================
+# Prometheus Alert Rules for Plataforma FastAPI Backend
+# ==============================================================================
+
+groups:
+  # Application-level alerts
+  - name: fastapi-application
+    rules:
+      # Application is down
+      - alert: FastAPIApplicationDown
+        expr: up{job="fastapi-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: fastapi
+        annotations:
+          summary: "FastAPI application is down"
+          description: "FastAPI application has been down for more than 1 minute"
+
+      # High response time
+      - alert: FastAPIHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="fastapi-app"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: fastapi
+        annotations:
+          summary: "FastAPI high response time"
+          description: "95th percentile response time is above 1 second for 5 minutes"
+
+      # High error rate
+      - alert: FastAPIHighErrorRate
+        expr: rate(http_requests_total{job="fastapi-app",status=~"5.."}[5m]) / rate(http_requests_total{job="fastapi-app"}[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          service: fastapi
+        annotations:
+          summary: "FastAPI high error rate"
+          description: "Error rate is above 10% for 3 minutes"
+
+      # High CPU usage
+      - alert: FastAPIHighCPUUsage
+        expr: rate(process_cpu_seconds_total{job="fastapi-app"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: fastapi
+        annotations:
+          summary: "FastAPI high CPU usage"
+          description: "CPU usage is above 80% for 5 minutes"
+
+      # High memory usage
+      - alert: FastAPIHighMemoryUsage
+        expr: process_resident_memory_bytes{job="fastapi-app"} / process_virtual_memory_bytes{job="fastapi-app"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: fastapi
+        annotations:
+          summary: "FastAPI high memory usage"
+          description: "Memory usage is above 90% for 5 minutes"
+
+      # Too few replicas
+      - alert: FastAPITooFewReplicas
+        expr: kube_deployment_status_replicas_available{deployment="fastapi-deployment"} < 2
+        for: 2m
+        labels:
+          severity: warning
+          service: fastapi
+        annotations:
+          summary: "FastAPI has too few replicas"
+          description: "FastAPI deployment has less than 2 available replicas"
+
+  # Database alerts
+  - name: postgresql-database
+    rules:
+      # Database is down
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL has been down for more than 1 minute"
+
+      # High connection usage
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL high connection usage"
+          description: "PostgreSQL connection usage is above 80% for 5 minutes"
+
+      # Long running queries
+      - alert: PostgreSQLLongRunningQueries
+        expr: pg_stat_activity_max_tx_duration > 300
+        for: 2m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL long running queries"
+          description: "PostgreSQL has queries running for more than 5 minutes"
+
+      # High replication lag
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag > 30
+        for: 2m
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL high replication lag"
+          description: "PostgreSQL replication lag is above 30 seconds"
+
+      # Database size growing too fast
+      - alert: PostgreSQLDatabaseSizeGrowth
+        expr: increase(pg_database_size_bytes[1h]) > 1073741824  # 1GB per hour
+        for: 1h
+        labels:
+          severity: warning
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL database growing rapidly"
+          description: "Database size increased by more than 1GB in the last hour"
+
+  # Redis alerts
+  - name: redis-cache
+    rules:
+      # Redis is down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute"
+
+      # High memory usage
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is above 90% for 5 minutes"
+
+      # High evicted keys
+      - alert: RedisHighEvictedKeys
+        expr: rate(redis_evicted_keys_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high evicted keys rate"
+          description: "Redis is evicting more than 100 keys per second for 2 minutes"
+
+      # High command rate
+      - alert: RedisHighCommandRate
+        expr: rate(redis_commands_processed_total[5m]) > 1000
+        for: 10m
+        labels:
+          severity: info
+          service: redis
+        annotations:
+          summary: "Redis high command rate"
+          description: "Redis is processing more than 1000 commands per second for 10 minutes"
+
+  # Infrastructure alerts
+  - name: kubernetes-infrastructure
+    rules:
+      # Node not ready
+      - alert: KubernetesNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes node not ready"
+          description: "Node {{ $labels.node }} has been not ready for more than 10 minutes"
+
+      # Pod crash looping
+      - alert: KubernetesPodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes pod crash looping"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+
+      # Persistent volume usage high
+      - alert: KubernetesPVHighUsage
+        expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.9
+        for: 2m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes PV high usage"
+          description: "PV usage is above 90% for {{ $labels.persistentvolumeclaim }}"
+
+      # High pod memory usage
+      - alert: KubernetesPodHighMemoryUsage
+        expr: container_memory_working_set_bytes / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes pod high memory usage"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} memory usage is above 90%"
+
+      # High pod CPU usage
+      - alert: KubernetesPodHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) / container_spec_cpu_quota * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes pod high CPU usage"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU usage is above 90%"
+
+  # Business logic alerts
+  - name: business-metrics
+    rules:
+      # Low request rate (possible outage or issue)
+      - alert: LowRequestRate
+        expr: rate(http_requests_total{job="fastapi-app"}[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Low request rate"
+          description: "Request rate is below 1 req/sec for 10 minutes - possible outage"
+
+      # High authentication failure rate
+      - alert: HighAuthFailureRate
+        expr: rate(http_requests_total{job="fastapi-app",endpoint="/api/v1/auth/login",status="401"}[5m]) / rate(http_requests_total{job="fastapi-app",endpoint="/api/v1/auth/login"}[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failure rate is above 10% for 3 minutes"
+
+      # Webhook delivery failures
+      - alert: WebhookDeliveryFailures
+        expr: rate(webhook_delivery_failures_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: business
+        annotations:
+          summary: "Webhook delivery failures"
+          description: "Webhook delivery failure rate is above 10% for 2 minutes"
+
+  # Security alerts
+  - name: security
+    rules:
+      # Suspicious request patterns
+      - alert: SuspiciousRequestPatterns
+        expr: rate(http_requests_total{job="fastapi-app",status="403"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          service: security
+        annotations:
+          summary: "Suspicious request patterns detected"
+          description: "High rate of 403 responses detected - possible attack"
+
+      # Rate limit exceeded frequently
+      - alert: RateLimitExceeded
+        expr: rate(http_requests_total{job="fastapi-app",status="429"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: info
+          service: security
+        annotations:
+          summary: "Rate limit exceeded frequently"
+          description: "High rate of 429 responses - clients are being rate limited"

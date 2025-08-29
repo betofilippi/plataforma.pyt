@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "updated_at": "2025-08-29T00:16:45.915038",
+  "modules": {
+    "vendas": {
+      "version": "2.0.0",
+      "path": "..\\modules\\official\\vendas",
+      "updated_at": "2025-08-29T00:16:45.915008"
+    }
+  }
+}

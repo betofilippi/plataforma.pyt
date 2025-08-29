@@ -1,0 +1,8 @@
+{
+  "name": "vendas",
+  "display_name": "Vendas",
+  "description": "Modulo de gestao de vendas e pedidos",
+  "version": "1.0.0",
+  "author": "plataforma.app",
+  "created_at": "2025-08-28T23:36:45.629096"
+}

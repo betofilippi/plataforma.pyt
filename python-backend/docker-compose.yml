@@ -1,0 +1,191 @@
+version: '3.8'
+
+services:
+  # ================================
+  # FastAPI Application
+  # ================================
+  api:
+    build:
+      context: .
+      target: development
+    container_name: plataforma-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/plataforma_nxt
+      - REDIS_URL=redis://redis:6379/0
+      - DEBUG=true
+    volumes:
+      - .:/app
+      - /app/.venv  # Exclude virtual environment from volume
+    depends_on:
+      - db
+      - redis
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ================================
+  # PostgreSQL Database
+  # ================================
+  db:
+    image: postgres:15-alpine
+    container_name: plataforma-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=plataforma_nxt
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=en_US.UTF-8 --lc-ctype=en_US.UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d plataforma_nxt"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ================================
+  # Redis Cache & Message Broker
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: plataforma-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ================================
+  # Celery Worker
+  # ================================
+  worker:
+    build:
+      context: .
+      target: development
+    container_name: plataforma-worker
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/plataforma_nxt
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+
+  # ================================
+  # Celery Beat (Scheduler)
+  # ================================
+  scheduler:
+    build:
+      context: .
+      target: development
+    container_name: plataforma-scheduler
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/plataforma_nxt
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+
+  # ================================
+  # Flower (Celery Monitoring)
+  # ================================
+  flower:
+    build:
+      context: .
+      target: development
+    container_name: plataforma-flower
+    command: celery -A app.tasks.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      - redis
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+
+  # ================================
+  # pgAdmin (Database Management)
+  # ================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: plataforma-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@plataforma.nxt
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+    networks:
+      - plataforma-network
+    restart: unless-stopped
+
+# ================================
+# Networks
+# ================================
+networks:
+  plataforma-network:
+    driver: bridge
+    name: plataforma-network
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  postgres_data:
+    driver: local
+    name: plataforma-postgres-data
+  
+  redis_data:
+    driver: local
+    name: plataforma-redis-data
+  
+  pgadmin_data:
+    driver: local
+    name: plataforma-pgadmin-data

@@ -177,10 +177,10 @@ cat > "$DEPLOY_DIR/deployment-manifest.json" << EOF
   "commit": "$VITE_COMMIT_HASH",
   "node_version": "$(node --version)",
   "npm_version": "$(npm --version)",
+  "python_version": "$(python --version 2>&1)",
   "build_artifacts": {
     "client": "dist/client/",
-    "server": "dist/server/",
-    "packages": "packages/*/dist/"
+    "backend": "python-backend/"
   }
 }
 EOF
@@ -208,9 +208,9 @@ deploy_frontend() {
     fi
 }
 
-# Deploy backend (Railway/Docker)
+# Deploy Python backend (Docker)
 deploy_backend() {
-    log "${BLUE}🖥️  Deploying backend...${NC}"
+    log "${BLUE}🐍 Deploying Python backend...${NC}"
     
     local webhook_url=""
     case $ENVIRONMENT in
@@ -279,7 +279,7 @@ case $ENVIRONMENT in
         ;;
     development)
         log "${BLUE}Development deployment (local only)${NC}"
-        run_command "npm start" "Starting development server"
+        run_command "cd python-backend && python -m uvicorn app.main_full:app --host 0.0.0.0 --port 8001" "Starting Python backend"
         ;;
 esac
 

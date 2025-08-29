@@ -67,49 +67,8 @@ fi
 log "${BLUE}🧹 Cleaning previous builds...${NC}"
 run_command "rm -rf dist coverage .vite" "Cleaning dist and cache directories"
 
-# Build packages first (in dependency order)
-log "${BLUE}📦 Building packages...${NC}"
-
-PACKAGES=(
-    "types"
-    "core-window-system" 
-    "design-system"
-    "auth-system"
-    "sdk"
-)
-
-for package in "${PACKAGES[@]}"; do
-    if [ -d "packages/$package" ]; then
-        log "${YELLOW}Building package: $package${NC}"
-        
-        cd "packages/$package"
-        
-        # Check if package has build script
-        if npm run --silent | grep -q "build"; then
-            if [ "$PARALLEL" = "true" ]; then
-                npm run build &
-                pids+=($!)
-            else
-                run_command "npm run build" "Building $package"
-            fi
-        else
-            log "${YELLOW}⚠️  No build script found for $package${NC}"
-        fi
-        
-        cd - > /dev/null
-    else
-        log "${YELLOW}⚠️  Package directory not found: $package${NC}"
-    fi
-done
-
-# Wait for parallel package builds to complete
-if [ "$PARALLEL" = "true" ] && [ ${#pids[@]} -gt 0 ]; then
-    log "${BLUE}⏳ Waiting for package builds to complete...${NC}"
-    for pid in "${pids[@]}"; do
-        wait "$pid"
-    done
-    log "${GREEN}✅ All package builds completed${NC}"
-fi
+# No packages to build anymore
+log "${GREEN}✅ No packages to build (100% Python backend)${NC}"
 
 # Type checking
 if [ "$SKIP_TESTS" != "true" ]; then
@@ -134,8 +93,8 @@ fi
 # Build client (frontend)
 run_command "npm run build:client" "Building client application"
 
-# Build server (backend)
-run_command "npm run build:server" "Building server application"
+# Python backend doesn't need building
+log "${GREEN}✅ Python backend ready (no build required)${NC}"
 
 # Run tests if not skipped
 if [ "$SKIP_TESTS" != "true" ]; then
@@ -160,7 +119,7 @@ cat > build-report.json << EOF
   "version": "$VITE_VERSION",
   "commit": "$VITE_COMMIT_HASH",
   "node_version": "$node_version",
-  "packages_built": [$(printf '"%s",' "${PACKAGES[@]}" | sed 's/,$//')]
+  "backend": "python"
 }
 EOF
 
@@ -170,9 +129,10 @@ if [ -f "dist/client/index.html" ]; then
     log "${GREEN}📏 Client build size: $client_size${NC}"
 fi
 
-if [ -f "dist/server/index.js" ]; then
-    server_size=$(du -sh dist/server | cut -f1)
-    log "${GREEN}📏 Server build size: $server_size${NC}"
+# Python backend size
+if [ -d "python-backend" ]; then
+    backend_size=$(du -sh python-backend | cut -f1)
+    log "${GREEN}📏 Python backend size: $backend_size${NC}"
 fi
 
 # Bundle analysis (if analyzer is available)
@@ -184,7 +144,7 @@ fi
 log "${GREEN}🎉 Build completed successfully!${NC}"
 log "${BLUE}Build artifacts:${NC}"
 log "  📂 Client: dist/client/"
-log "  📂 Server: dist/server/" 
+log "  📂 Backend: python-backend/" 
 log "  📂 Packages: packages/*/dist/"
 log "  📊 Report: build-report.json"
 

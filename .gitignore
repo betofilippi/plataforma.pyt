@@ -36,3 +36,32 @@ archive/
 *.backup
 *.bak
 *.tmp
+
+# Environment files with sensitive data
+.env
+.env.local
+.env.production
+client/.env
+client/.env.production
+python-backend/.env
+
+# Supabase binaries
+supabase.exe
+supabase.tar.gz
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Test results
+test-results/
+playwright-report/
+coverage/
+
+# Temporary files
+temp_token.json
+nul

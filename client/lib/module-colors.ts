@@ -323,6 +323,19 @@ export const MODULE_COLORS: Record<string, ModuleColor> = {
       medium: 'rgba(124, 58, 237, 0.3)',
       strong: 'rgba(124, 58, 237, 0.5)'
     }
+  },
+
+  // Admin - Azul escuro
+  admin: {
+    primary: '#1E40AF',
+    secondary: '#1E3A8A',
+    accent: '#3B82F6',
+    gradient: 'from-blue-800 to-blue-900',
+    rgba: {
+      light: 'rgba(30, 64, 175, 0.1)',
+      medium: 'rgba(30, 64, 175, 0.3)',
+      strong: 'rgba(30, 64, 175, 0.5)'
+    }
   }
 };
 

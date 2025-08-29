@@ -1,0 +1,367 @@
+# ==============================================================================
+# Kubernetes ConfigMaps for Plataforma FastAPI Backend
+# ==============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fastapi-config
+  namespace: plataforma-fastapi
+  labels:
+    app: plataforma-fastapi
+    component: config
+data:
+  # Application settings
+  APP_NAME: "Plataforma NXT FastAPI API"
+  APP_VERSION: "1.0.0"
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  
+  # Server settings
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8000"
+  ALLOWED_HOSTS: "*"
+  
+  # Database settings
+  DATABASE_POOL_SIZE: "20"
+  DATABASE_MAX_OVERFLOW: "40"
+  DATABASE_POOL_TIMEOUT: "30"
+  DATABASE_POOL_RECYCLE: "3600"
+  DATABASE_ECHO: "false"
+  
+  # Redis settings
+  DISABLE_REDIS: "false"
+  REDIS_MAX_CONNECTIONS: "20"
+  REDIS_SOCKET_TIMEOUT: "5"
+  REDIS_SOCKET_CONNECT_TIMEOUT: "5"
+  
+  # CORS settings
+  CORS_ORIGINS: '["https://yourdomain.com", "https://www.yourdomain.com"]'
+  CORS_ALLOW_CREDENTIALS: "true"
+  
+  # Rate limiting
+  DISABLE_RATE_LIMITING: "false"
+  RATE_LIMIT_PER_MINUTE: "120"
+  RATE_LIMIT_BURST: "240"
+  
+  # JWT settings
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "7"
+  
+  # File upload settings
+  UPLOAD_MAX_SIZE: "10485760"  # 10MB
+  UPLOAD_ALLOWED_EXTENSIONS: ".jpg,.jpeg,.png,.gif,.pdf,.txt,.docx,.xlsx"
+  STORAGE_PATH: "/app/storage"
+  
+  # Logging settings
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  
+  # Sentry settings
+  SENTRY_ENVIRONMENT: "production"
+  SENTRY_TRACES_SAMPLE_RATE: "0.1"
+  
+  # Pagination settings
+  DEFAULT_PAGE_SIZE: "20"
+  MAX_PAGE_SIZE: "100"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: plataforma-fastapi
+  labels:
+    app: plataforma-fastapi
+    component: database
+data:
+  POSTGRES_DB: "plataforma_nxt"
+  POSTGRES_USER: "plataforma"
+  PGDATA: "/var/lib/postgresql/data/pgdata"
+  
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: plataforma-fastapi
+  labels:
+    app: plataforma-fastapi
+    component: cache
+data:
+  redis.conf: |
+    # Redis configuration for production
+    
+    # Memory settings
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence settings
+    appendonly yes
+    appendfsync everysec
+    
+    # Performance settings
+    tcp-keepalive 300
+    timeout 0
+    tcp-backlog 511
+    databases 16
+    
+    # Snapshot settings
+    save 900 1
+    save 300 10
+    save 60 10000
+    
+    # RDB settings
+    rdbcompression yes
+    rdbchecksum yes
+    stop-writes-on-bgsave-error yes
+    
+    # Security settings
+    protected-mode yes
+    
+    # Logging
+    loglevel notice
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: plataforma-fastapi
+  labels:
+    app: plataforma-fastapi
+    component: proxy
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log notice;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        # Logging
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for" '
+                        'rt=$request_time uct="$upstream_connect_time" '
+                        'uht="$upstream_header_time" urt="$upstream_response_time"';
+        
+        access_log /var/log/nginx/access.log main;
+        
+        # Performance
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        client_max_body_size 10M;
+        
+        # Gzip compression
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1000;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/json
+            application/javascript
+            application/xml+rss
+            application/atom+xml
+            image/svg+xml;
+        
+        # Rate limiting
+        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+        limit_req_zone $binary_remote_addr zone=login:10m rate=1r/s;
+        
+        # Upstream backend
+        upstream fastapi_backend {
+            least_conn;
+            server fastapi-service:8000 max_fails=3 fail_timeout=30s;
+            keepalive 32;
+        }
+        
+        # Default server
+        server {
+            listen 80 default_server;
+            server_name _;
+            
+            # Security headers
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            
+            # Health check endpoint
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+            
+            # API proxy
+            location /api/ {
+                limit_req zone=api burst=20 nodelay;
+                
+                proxy_pass http://fastapi_backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                proxy_connect_timeout 30s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+                
+                proxy_buffering off;
+                proxy_http_version 1.1;
+                proxy_set_header Connection "";
+            }
+            
+            # Auth endpoints with stricter rate limiting
+            location /api/v1/auth/ {
+                limit_req zone=login burst=5 nodelay;
+                
+                proxy_pass http://fastapi_backend;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                
+                proxy_connect_timeout 30s;
+                proxy_send_timeout 30s;
+                proxy_read_timeout 30s;
+                
+                proxy_buffering off;
+                proxy_http_version 1.1;
+                proxy_set_header Connection "";
+            }
+            
+            # Default location
+            location / {
+                return 404;
+            }
+        }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: plataforma-fastapi
+  labels:
+    app: plataforma-fastapi
+    component: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'plataforma-fastapi'
+        environment: 'production'
+    
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+    
+    scrape_configs:
+      # Prometheus self-monitoring
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+      
+      # FastAPI application metrics
+      - job_name: 'fastapi'
+        static_configs:
+          - targets: ['fastapi-service:8000']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+      
+      # PostgreSQL metrics
+      - job_name: 'postgres'
+        static_configs:
+          - targets: ['postgres-service:9187']
+        scrape_interval: 15s
+      
+      # Redis metrics
+      - job_name: 'redis'
+        static_configs:
+          - targets: ['redis-service:9121']
+        scrape_interval: 15s
+      
+      # Kubernetes API server
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+      
+      # Kubernetes nodes
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: __address__
+            replacement: kubernetes.default.svc:443
+          - source_labels: [__meta_kubernetes_node_name]
+            regex: (.+)
+            target_label: __metrics_path__
+            replacement: /api/v1/nodes/${1}/proxy/metrics
+      
+      # Kubernetes pods
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name

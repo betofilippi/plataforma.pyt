@@ -1,0 +1,338 @@
+# ==============================================================================
+# Production Dockerfile for Plataforma NXT FastAPI Backend
+# Multi-stage build with security hardening and optimization
+# ==============================================================================
+
+# ==============================================================================
+# Stage 1: Build dependencies and install packages
+# ==============================================================================
+FROM python:3.11-slim-bullseye as builder
+
+# Set build arguments
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=1.0.0
+
+# Add metadata labels
+LABEL maintainer="Plataforma NXT Team <dev@plataforma.nxt>" \
+      org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.version=$VERSION \
+      org.label-schema.name="plataforma-backend" \
+      org.label-schema.description="FastAPI backend for Plataforma NXT" \
+      org.label-schema.url="https://plataforma.nxt" \
+      org.label-schema.schema-version="1.0"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VENV_IN_PROJECT=1 \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+# Install system dependencies for building
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    gcc \
+    g++ \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock* ./
+
+# Configure Poetry and install dependencies
+RUN poetry config virtualenvs.create true \
+    && poetry config virtualenvs.in-project true \
+    && poetry install --only=main,production --no-dev --no-interaction --no-ansi \
+    && rm -rf $POETRY_CACHE_DIR
+
+# ==============================================================================
+# Stage 2: Production runtime
+# ==============================================================================
+FROM python:3.11-slim-bullseye as production
+
+# Set build arguments for metadata
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=1.0.0
+
+# Add metadata labels
+LABEL maintainer="Plataforma NXT Team <dev@plataforma.nxt>" \
+      org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.version=$VERSION \
+      org.label-schema.name="plataforma-backend" \
+      org.label-schema.description="FastAPI backend for Plataforma NXT" \
+      org.label-schema.url="https://plataforma.nxt" \
+      org.label-schema.schema-version="1.0"
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH" \
+    APP_ENV=production \
+    PYTHONPATH="/app:$PYTHONPATH"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
+    libpq5 \
+    curl \
+    ca-certificates \
+    dumb-init \
+    gosu \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
+
+# Create non-root user and group
+RUN groupadd --gid 1000 appuser \
+    && useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser \
+    && mkdir -p /app /app/storage /app/logs \
+    && chown -R appuser:appuser /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy virtual environment from builder stage
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/storage/uploads \
+             /app/storage/temp \
+             /app/logs \
+             /app/data \
+    && chown -R appuser:appuser /app/storage \
+    && chown -R appuser:appuser /app/logs \
+    && chown -R appuser:appuser /app/data \
+    && chmod -R 755 /app/storage \
+    && chmod -R 755 /app/logs
+
+# Install additional production dependencies if requirements.txt exists
+RUN if [ -f requirements.txt ]; then \
+        pip install --no-cache-dir -r requirements.txt; \
+    fi
+
+# Security hardening
+RUN find /app -type f -name "*.py" -exec chmod 644 {} \; \
+    && find /app -type d -exec chmod 755 {} \; \
+    && chmod +x /app/docker-entrypoint.sh || true
+
+# Health check configuration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Create entrypoint script
+RUN cat > /app/docker-entrypoint.sh << 'EOF'
+#!/bin/bash
+set -e
+
+# Function to log messages
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [ENTRYPOINT] $1"
+}
+
+# Wait for database to be ready (if DATABASE_URL is set)
+if [ -n "$DATABASE_URL" ]; then
+    log "Waiting for database connection..."
+    python -c "
+import asyncio
+import asyncpg
+import os
+import sys
+from urllib.parse import urlparse
+
+async def wait_for_db():
+    url = os.getenv('DATABASE_URL', '')
+    if not url:
+        return True
+    
+    # Parse the URL to extract connection details
+    parsed = urlparse(url)
+    if parsed.scheme not in ['postgresql', 'postgresql+asyncpg']:
+        return True
+    
+    # Extract connection parameters
+    host = parsed.hostname or 'localhost'
+    port = parsed.port or 5432
+    user = parsed.username or 'postgres'
+    password = parsed.password or ''
+    database = parsed.path.lstrip('/') or 'postgres'
+    
+    max_retries = 30
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            conn = await asyncpg.connect(
+                host=host,
+                port=port,
+                user=user,
+                password=password,
+                database=database
+            )
+            await conn.close()
+            print(f'Database connection successful after {retry_count} retries')
+            return True
+        except Exception as e:
+            retry_count += 1
+            print(f'Database connection attempt {retry_count}/{max_retries} failed: {e}')
+            if retry_count < max_retries:
+                await asyncio.sleep(2)
+    
+    print('Failed to connect to database after all retries')
+    return False
+
+if not asyncio.run(wait_for_db()):
+    sys.exit(1)
+"
+    if [ $? -ne 0 ]; then
+        log "Failed to connect to database. Exiting."
+        exit 1
+    fi
+    log "Database connection established."
+fi
+
+# Run database migrations if requested
+if [ "$RUN_MIGRATIONS" = "true" ]; then
+    log "Running database migrations..."
+    alembic upgrade head || {
+        log "Migration failed. Exiting."
+        exit 1
+    }
+    log "Migrations completed successfully."
+fi
+
+# Create superuser if requested
+if [ "$CREATE_SUPERUSER" = "true" ] && [ -n "$SUPERUSER_EMAIL" ] && [ -n "$SUPERUSER_PASSWORD" ]; then
+    log "Creating superuser..."
+    python -c "
+import asyncio
+from app.core.database import get_database_manager
+from app.services.auth import create_user
+from app.schemas.auth import UserCreate
+
+async def create_superuser():
+    db_manager = get_database_manager()
+    await db_manager.initialize()
+    
+    async with db_manager.get_session() as session:
+        user_data = UserCreate(
+            email='$SUPERUSER_EMAIL',
+            password='$SUPERUSER_PASSWORD',
+            full_name='Super Admin',
+            is_superuser=True,
+            is_active=True
+        )
+        await create_user(session, user_data)
+        print('Superuser created successfully')
+
+asyncio.run(create_superuser())
+" || log "Superuser creation failed (may already exist)"
+fi
+
+# Switch to non-root user and execute the main command
+log "Starting application as user: $(whoami)"
+exec "$@"
+EOF
+
+# Make entrypoint executable
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Switch to non-root user
+USER appuser
+
+# Set the entrypoint
+ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
+
+# Default command
+CMD ["gunicorn", "app.main:app", \
+     "--bind", "0.0.0.0:8000", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--workers", "4", \
+     "--worker-connections", "1000", \
+     "--max-requests", "1000", \
+     "--max-requests-jitter", "100", \
+     "--timeout", "30", \
+     "--keep-alive", "5", \
+     "--preload", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info"]
+
+# ==============================================================================
+# Stage 3: Development runtime (optional)
+# ==============================================================================
+FROM builder as development
+
+# Install development dependencies
+RUN poetry install --no-interaction --no-ansi
+
+# Install additional development tools
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
+    git \
+    vim \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set development environment
+ENV APP_ENV=development \
+    DEBUG=true
+
+# Create non-root user for development
+RUN groupadd --gid 1000 devuser \
+    && useradd --uid 1000 --gid devuser --shell /bin/bash --create-home devuser \
+    && chown -R devuser:devuser /app
+
+USER devuser
+
+# Health check for development
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+# Development command with hot reload
+CMD ["python", "-m", "uvicorn", "app.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--reload", \
+     "--reload-dir", "/app/app", \
+     "--log-level", "debug"]
+
+# ==============================================================================
+# Build instructions:
+# 
+# Production build:
+#   docker build --target production -t plataforma-backend:prod .
+# 
+# Development build:
+#   docker build --target development -t plataforma-backend:dev .
+# 
+# Build with metadata:
+#   docker build --target production \
+#     --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+#     --build-arg VCS_REF=$(git rev-parse --short HEAD) \
+#     --build-arg VERSION=1.0.0 \
+#     -t plataforma-backend:prod .
+# ==============================================================================

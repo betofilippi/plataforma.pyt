@@ -1,0 +1,553 @@
+# ==============================================================================
+# CI/CD Pipeline for Python FastAPI Backend
+# ==============================================================================
+
+name: Python Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/*'
+    paths:
+      - 'python-backend/**'
+      - '.github/workflows/python-backend-ci.yml'
+  
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'python-backend/**'
+      - '.github/workflows/python-backend-ci.yml'
+  
+  release:
+    types: [published]
+
+# Environment variables
+env:
+  PYTHON_VERSION: '3.11'
+  POETRY_VERSION: '1.6.1'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: plataforma-fastapi
+
+# Security: Limit permissions
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  # ==============================================================================
+  # Code Quality and Testing
+  # ==============================================================================
+  quality-tests:
+    name: Code Quality & Testing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./python-backend
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_plataforma_nxt
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+      
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project true
+      
+      - name: Install dependencies
+        run: |
+          poetry install --with dev,test
+      
+      - name: Run code formatting check (Black)
+        run: |
+          poetry run black --check --diff .
+      
+      - name: Run import sorting check (isort)
+        run: |
+          poetry run isort --check-only --diff .
+      
+      - name: Run linting (flake8)
+        run: |
+          poetry run flake8 app tests
+      
+      - name: Run type checking (mypy)
+        run: |
+          poetry run mypy app
+      
+      - name: Run security scanning (bandit)
+        run: |
+          poetry run bandit -r app -f json -o bandit-report.json || true
+          poetry run bandit -r app
+      
+      - name: Upload bandit results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: python-backend/bandit-report.json
+          category: bandit
+        continue-on-error: true
+      
+      - name: Run dependency vulnerability scan
+        run: |
+          poetry run safety check --json --output safety-report.json || true
+          poetry run safety check
+      
+      - name: Set up test environment
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_plataforma_nxt
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          JWT_SECRET_KEY: test-jwt-secret-key-for-ci
+          ENVIRONMENT: testing
+        run: |
+          # Wait for services to be ready
+          until pg_isready -h localhost -p 5432 -U test_user; do sleep 1; done
+          until redis-cli -h localhost -p 6379 ping; do sleep 1; done
+          
+          # Run database migrations
+          poetry run alembic upgrade head
+      
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_plataforma_nxt
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          JWT_SECRET_KEY: test-jwt-secret-key-for-ci
+          ENVIRONMENT: testing
+        run: |
+          poetry run pytest \
+            --cov=app \
+            --cov-report=html \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junit-xml=pytest-report.xml \
+            --verbose \
+            --tb=short
+      
+      - name: Upload test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Python Backend Tests
+          path: python-backend/pytest-report.xml
+          reporter: java-junit
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          file: python-backend/coverage.xml
+          flags: python-backend
+          name: python-backend-coverage
+          fail_ci_if_error: false
+      
+      - name: Generate coverage badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          poetry run coverage-badge -o coverage-badge.svg
+      
+      - name: Archive test artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-artifacts
+          path: |
+            python-backend/htmlcov/
+            python-backend/coverage.xml
+            python-backend/pytest-report.xml
+            python-backend/bandit-report.json
+            python-backend/safety-report.json
+            python-backend/coverage-badge.svg
+          retention-days: 30
+
+  # ==============================================================================
+  # Build Docker Image
+  # ==============================================================================
+  build-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: quality-tests
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Get version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "version=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./python-backend
+          file: ./python-backend/Dockerfile.prod
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+      
+      - name: Set image output
+        id: image
+        run: echo "image=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+      
+      - name: Run Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.image.outputs.image }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy'
+
+  # ==============================================================================
+  # Performance Testing
+  # ==============================================================================
+  performance-tests:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: build-image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Compose
+        run: |
+          cd python-backend
+          cp docker-compose.prod.yml docker-compose.test.yml
+          # Modify for testing environment
+          sed -i 's/plataforma-fastapi:latest/${{ needs.build-image.outputs.image }}/g' docker-compose.test.yml
+      
+      - name: Start test environment
+        run: |
+          cd python-backend
+          docker-compose -f docker-compose.test.yml up -d --wait
+          sleep 30  # Wait for services to be ready
+      
+      - name: Run performance tests
+        run: |
+          # Install k6 for load testing
+          curl -s https://github.com/grafana/k6/releases/download/v0.47.0/k6-v0.47.0-linux-amd64.tar.gz | tar xvz --strip-components 1
+          chmod +x k6
+          
+          # Create basic load test script
+          cat > load-test.js << 'EOF'
+          import http from 'k6/http';
+          import { check, sleep } from 'k6';
+          
+          export let options = {
+            vus: 10,
+            duration: '2m',
+            thresholds: {
+              http_req_duration: ['p(95)<500'],
+              http_req_failed: ['rate<0.1'],
+            },
+          };
+          
+          export default function() {
+            let response = http.get('http://localhost:8000/health');
+            check(response, {
+              'status is 200': (r) => r.status === 200,
+              'response time < 500ms': (r) => r.timings.duration < 500,
+            });
+            sleep(1);
+          }
+          EOF
+          
+          # Run load test
+          ./k6 run load-test.js
+      
+      - name: Cleanup test environment
+        if: always()
+        run: |
+          cd python-backend
+          docker-compose -f docker-compose.test.yml down -v
+
+  # ==============================================================================
+  # Deploy to Staging
+  # ==============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-image, quality-tests]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://api-staging.yourdomain.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+      
+      - name: Set up Kubernetes context
+        run: |
+          # Configure kubectl context for staging cluster
+          # This would typically use cluster credentials from secrets
+          echo "${{ secrets.STAGING_KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Deploy to staging
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Update image in Kubernetes manifests
+          cd python-backend/k8s
+          sed -i 's/plataforma-fastapi:latest/${{ needs.build-image.outputs.image }}/g' fastapi.yaml
+          
+          # Apply Kubernetes manifests
+          kubectl apply -f namespace.yaml
+          kubectl apply -f configmap.yaml
+          kubectl apply -f secrets.yaml  # This should be managed securely
+          kubectl apply -f postgres.yaml
+          kubectl apply -f redis.yaml
+          kubectl apply -f fastapi.yaml
+          kubectl apply -f ingress.yaml
+          
+          # Wait for deployment to be ready
+          kubectl wait --for=condition=available --timeout=600s deployment/fastapi-deployment -n plataforma-fastapi
+      
+      - name: Run smoke tests
+        run: |
+          # Basic smoke tests against staging environment
+          sleep 30  # Wait for services to be fully ready
+          
+          # Health check
+          curl -f https://api-staging.yourdomain.com/health || exit 1
+          
+          # API availability
+          curl -f https://api-staging.yourdomain.com/api || exit 1
+      
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        if: success()
+        with:
+          status: success
+          text: 'FastAPI Backend successfully deployed to staging! 🚀'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ==============================================================================
+  # Deploy to Production
+  # ==============================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-image, quality-tests, performance-tests]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.yourdomain.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+      
+      - name: Set up Kubernetes context
+        run: |
+          echo "${{ secrets.PRODUCTION_KUBE_CONFIG }}" | base64 -d > kubeconfig
+          export KUBECONFIG=kubeconfig
+      
+      - name: Deploy to production
+        run: |
+          export KUBECONFIG=kubeconfig
+          
+          # Update image in Kubernetes manifests
+          cd python-backend/k8s
+          sed -i 's/plataforma-fastapi:latest/${{ needs.build-image.outputs.image }}/g' fastapi.yaml
+          
+          # Apply Kubernetes manifests with rolling update
+          kubectl apply -f namespace.yaml
+          kubectl apply -f configmap.yaml
+          # kubectl apply -f secrets.yaml  # Should be managed through external secret management
+          kubectl apply -f postgres.yaml
+          kubectl apply -f redis.yaml
+          kubectl apply -f fastapi.yaml
+          kubectl apply -f ingress.yaml
+          
+          # Wait for deployment to be ready
+          kubectl wait --for=condition=available --timeout=600s deployment/fastapi-deployment -n plataforma-fastapi
+          
+          # Verify rollout
+          kubectl rollout status deployment/fastapi-deployment -n plataforma-fastapi
+      
+      - name: Run production smoke tests
+        run: |
+          sleep 60  # Wait for load balancer to be ready
+          
+          # Health check
+          curl -f https://api.yourdomain.com/health || exit 1
+          
+          # API availability
+          curl -f https://api.yourdomain.com/api || exit 1
+      
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: FastAPI Backend ${{ github.ref }}
+          body: |
+            ## Changes in this release
+            - Docker image: `${{ needs.build-image.outputs.image }}`
+            - Image digest: `${{ needs.build-image.outputs.digest }}`
+            
+            ## Deployment
+            This version has been automatically deployed to production.
+          draft: false
+          prerelease: false
+      
+      - name: Notify deployment success
+        uses: 8398a7/action-slack@v3
+        if: success()
+        with:
+          status: success
+          text: 'FastAPI Backend successfully deployed to production! 🎉'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Notify deployment failure
+        uses: 8398a7/action-slack@v3
+        if: failure()
+        with:
+          status: failure
+          text: 'FastAPI Backend deployment to production failed! ❌'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ==============================================================================
+  # Security Scanning
+  # ==============================================================================
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: quality-tests
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+      
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:python"

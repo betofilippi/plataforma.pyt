@@ -3,8 +3,8 @@ echo ========================================
 echo   RESTART SEGURO DO SERVIDOR DEV
 echo ========================================
 echo.
-echo [1] Procurando processo na porta 3030...
-for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3030') do (
+echo [1] Procurando processo na porta 3333...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3333') do (
     echo    - Encontrado processo PID: %%a
     echo    - Matando processo...
     taskkill /PID %%a /F 2>nul
@@ -26,8 +26,8 @@ if exist "node_modules\.vite" (
 
 echo.
 echo [3] Iniciando servidor de desenvolvimento...
-echo    - Porta: 3030
-echo    - URL: http://localhost:3030
+echo    - Porta: 3333
+echo    - URL: http://localhost:3333
 echo.
 echo ========================================
 npm run dev

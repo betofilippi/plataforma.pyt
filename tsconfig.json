@@ -29,24 +29,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./client/*"],
-      "@shared/*": ["./shared/*"],
-      "@/modulos/*": ["./modulos/*"],
-      "@plataforma/types": ["./packages/types/src"],
-      "@plataforma/core-window-system": ["./packages/core-window-system/src"],
-      "@plataforma/design-system": ["./packages/design-system/src"],
-      "@plataforma/auth-system": ["./packages/auth-system/src"],
-      "@plataforma/module-database": ["./packages/@plataforma/module-database/src"],
-      "@plataforma/sdk": ["./packages/sdk/src"]
+      "@shared/*": ["./shared/*"]
     }
   },
   "include": [
     "client/**/*",
-    "server/**/*",
     "shared/**/*",
-    "modulos/**/*",
-    "packages/**/*",
-    "vite.config.ts",
-    "vite.config.server.ts"
+    "vite.config.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

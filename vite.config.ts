@@ -1,7 +1,6 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react"; // Switch to regular React plugin
 import path from "path";
-import { createServer } from "./server";
 // Temporarily disabled - causing import corruption
 // import { moduleFederation, createPlataformaModuleFederation } from "./packages/vite-plugin-module-federation/dist/index.mjs";
 
@@ -11,15 +10,38 @@ export default defineConfig(({ mode }) => ({
   clearScreen: false,
   server: {
     host: "::",
-    port: 3030, // Porta diferente para evitar conflitos
+    port: 3333, // Porta padrão do projeto
     proxy: {
-      // API proxy to our Express server (handled by expressPlugin but keeping for reference)
+      // API proxy to Python FastAPI backend
       '/api': {
-        target: 'http://localhost:4000',
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path, // Keep the /api prefix
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        }
+      },
+      // WebSocket proxy for real-time features
+      '/ws': {
+        target: 'ws://localhost:8001',
+        ws: true,
         changeOrigin: true,
         secure: false,
       }
     },
+    cors: {
+      origin: ['http://localhost:3333', 'http://localhost:8001'],
+      credentials: true
+    }
   },
   build: {
     outDir: "dist/spa",
@@ -72,13 +94,6 @@ export default defineConfig(({ mode }) => ({
           
           if (id.includes('/components/windows/')) {
             return 'window-components';
-          }
-          
-          if (id.includes('/modulos/')) {
-            const match = id.match(/\/modulos\/([^\/]+)/);
-            if (match) {
-              return `module-${match[1].toLowerCase()}`;
-            }
           }
           
           if (id.includes('/lib/') || id.includes('/utils/')) {
@@ -162,7 +177,6 @@ export default defineConfig(({ mode }) => ({
     //     }
     //   })
     // ),
-    expressPlugin()
   ],
   // Otimizações de dependências com exclusões para resolver EBUSY
   optimizeDeps: {
@@ -197,37 +211,9 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: [
-      { find: "@/modulos", replacement: path.resolve(__dirname, "./modulos") },
       { find: "@/shared", replacement: path.resolve(__dirname, "./shared") },
-      { find: "@", replacement: path.resolve(__dirname, "./client") },
-      // Package modules aliases
-      { find: "@plataforma/module-database", replacement: path.resolve(__dirname, "./packages/@plataforma/module-database/src") },
-      { find: "@plataforma/vite-plugin-module-federation", replacement: path.resolve(__dirname, "./packages/vite-plugin-module-federation/src") },
-      { find: "@plataforma/module-registry", replacement: path.resolve(__dirname, "./packages/module-registry/src") },
-      { find: "@plataforma/module-contracts", replacement: path.resolve(__dirname, "./packages/module-contracts/src") },
-      { find: "@plataforma/sdk", replacement: path.resolve(__dirname, "./packages/sdk/src") }
+      { find: "@", replacement: path.resolve(__dirname, "./client") }
     ],
   },
 }));
 
-function expressPlugin(): Plugin {
-  return {
-    name: "express-plugin",
-    apply: "serve", // Only apply during development (serve mode)
-    configureServer(server) {
-      const app = createServer();
-
-      // IMPORTANTE: Usar o Express APENAS para rotas /api
-      // Isso evita que o Express intercepte a rota principal "/"
-      server.middlewares.use((req, res, next) => {
-        // Apenas processar rotas que começam com /api
-        if (req.url?.startsWith('/api')) {
-          app.app(req, res, next);
-        } else {
-          // Deixar o Vite lidar com todas as outras rotas
-          next();
-        }
-      });
-    },
-  };
-}

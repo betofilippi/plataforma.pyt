@@ -1,0 +1,468 @@
+# ==============================================================================
+# Production Docker Compose for Python FastAPI Backend
+# Complete stack with FastAPI, PostgreSQL, Redis, and Nginx
+# ==============================================================================
+
+version: '3.8'
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  backend_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  # Database volumes
+  postgres_data:
+    driver: local
+  postgres_backup:
+    driver: local
+    
+  # Redis data
+  redis_data:
+    driver: local
+    
+  # Application data
+  app_storage:
+    driver: local
+  app_logs:
+    driver: local
+    
+  # Nginx data
+  nginx_logs:
+    driver: local
+  nginx_certs:
+    driver: local
+    
+  # Monitoring data
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ==============================================================================
+# Services
+# ==============================================================================
+services:
+  
+  # ============================================================================
+  # PostgreSQL Database
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: fastapi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-plataforma_nxt}
+      POSTGRES_USER: ${POSTGRES_USER:-plataforma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=peer"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backup:/backup
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.10
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-plataforma} -d ${POSTGRES_DB:-plataforma_nxt}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c max_worker_processes=8
+      -c max_parallel_workers_per_gather=4
+      -c max_parallel_workers=8
+      -c max_parallel_maintenance_workers=4
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+
+  # ============================================================================
+  # Redis Cache and Session Store
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 300
+      --timeout 0
+      --tcp-backlog 511
+      --databases 16
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --rdbcompression yes
+      --rdbchecksum yes
+      --stop-writes-on-bgsave-error yes
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.11
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # ============================================================================
+  # FastAPI Application
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: production
+      args:
+        BUILD_DATE: ${BUILD_DATE}
+        VCS_REF: ${VCS_REF}
+        VERSION: ${VERSION:-1.0.0}
+    image: plataforma-fastapi:${VERSION:-latest}
+    container_name: fastapi_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Application settings
+      APP_NAME: ${APP_NAME:-Plataforma NXT FastAPI API}
+      APP_VERSION: ${VERSION:-1.0.0}
+      ENVIRONMENT: production
+      DEBUG: "false"
+      
+      # Server settings
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8000
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      
+      # Database settings
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-plataforma}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-plataforma_nxt}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-20}
+      DATABASE_MAX_OVERFLOW: ${DATABASE_MAX_OVERFLOW:-40}
+      
+      # Redis settings
+      REDIS_URL: redis://redis:6379/0
+      DISABLE_REDIS: "false"
+      
+      # Security settings
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY}
+      
+      # CORS settings
+      CORS_ORIGINS: ${CORS_ORIGINS:-["https://yourdomain.com"]}
+      
+      # Rate limiting
+      DISABLE_RATE_LIMITING: "false"
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-120}
+      
+      # External services
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      
+      # Monitoring
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: production
+      
+      # Migration and setup
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      CREATE_SUPERUSER: ${CREATE_SUPERUSER:-false}
+      SUPERUSER_EMAIL: ${SUPERUSER_EMAIL}
+      SUPERUSER_PASSWORD: ${SUPERUSER_PASSWORD}
+      
+    volumes:
+      - app_storage:/app/storage
+      - app_logs:/app/logs
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.20
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+      replicas: ${API_REPLICAS:-2}
+      update_config:
+        parallelism: 1
+        delay: 30s
+        order: start-first
+        failure_action: rollback
+
+  # ============================================================================
+  # Nginx Reverse Proxy and Load Balancer
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: fastapi_nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_logs:/var/log/nginx
+      - nginx_certs:/etc/nginx/certs:ro
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.30
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+
+  # ============================================================================
+  # Celery Worker (Background Tasks)
+  # ============================================================================
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: production
+    image: plataforma-fastapi:${VERSION:-latest}
+    container_name: fastapi_celery_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Inherit from API service
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-plataforma}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-plataforma_nxt}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: ${SECRET_KEY}
+      ENVIRONMENT: production
+      
+    command: >
+      celery -A app.tasks worker
+      --loglevel=info
+      --concurrency=4
+      --max-tasks-per-child=1000
+      --time-limit=300
+      --soft-time-limit=240
+    volumes:
+      - app_storage:/app/storage
+      - app_logs:/app/logs
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.21
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.tasks", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # ============================================================================
+  # Celery Beat (Scheduled Tasks)
+  # ============================================================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: production
+    image: plataforma-fastapi:${VERSION:-latest}
+    container_name: fastapi_celery_beat
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-plataforma}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-plataforma_nxt}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      SECRET_KEY: ${SECRET_KEY}
+      ENVIRONMENT: production
+      
+    command: >
+      celery -A app.tasks beat
+      --loglevel=info
+      --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - app_logs:/app/logs
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.22
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # ============================================================================
+  # Prometheus (Metrics Collection)
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fastapi_prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.40
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # ============================================================================
+  # Grafana (Metrics Visualization)
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: fastapi_grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      backend_network:
+        ipv4_address: 172.25.0.41
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+
+# ==============================================================================
+# Configuration Notes:
+# 
+# 1. Environment Variables:
+#    Copy .env.example to .env.prod and configure all required variables
+# 
+# 2. SSL Certificates:
+#    Place SSL certificates in ./docker/nginx/certs/
+# 
+# 3. Database Initialization:
+#    Place initialization scripts in ./database/init/
+# 
+# 4. Scaling:
+#    Use `docker-compose up --scale api=3` to scale API instances
+# 
+# 5. Monitoring:
+#    - Prometheus: http://localhost:9090
+#    - Grafana: http://localhost:3000 (admin/password from env)
+# 
+# 6. Deployment Commands:
+#    docker-compose -f docker-compose.prod.yml up -d
+#    docker-compose -f docker-compose.prod.yml logs -f
+#    docker-compose -f docker-compose.prod.yml down
+# ==============================================================================

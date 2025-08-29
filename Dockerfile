@@ -1,5 +1,5 @@
-# Multi-stage Docker build for Plataforma App
-# Security-hardened production Docker image
+# Multi-stage Docker build for Plataforma Frontend
+# Builds React app and serves with Nginx
 
 # Base stage with security hardening
 FROM node:20-alpine as base
@@ -37,15 +37,15 @@ COPY --chown=plataforma:nodejs . .
 # Switch to non-root user
 USER plataforma
 
-# Expose ports
-EXPOSE 3030 4000
+# Expose port
+EXPOSE 3333
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3030/health || curl -f http://localhost:4000/health || exit 1
+    CMD curl -f http://localhost:3333/ || exit 1
 
 # Start development server
-CMD ["dumb-init", "npm", "run", "dev"]
+CMD ["npm", "run", "dev"]
 
 # Build stage
 FROM base as builder
@@ -67,8 +67,7 @@ ENV VITE_BUILD_VERSION=${BUILD_VERSION}
 ENV VITE_BUILD_DATE=${BUILD_DATE}
 ENV VITE_GIT_COMMIT=${GIT_COMMIT}
 
-# Build packages first
-RUN npm run build:packages
+# Build frontend (packages removed)
 
 # Build application
 RUN npm run build
@@ -104,17 +103,8 @@ COPY --from=builder --chown=plataforma:nodejs /app/node_modules ./node_modules
 # Copy built application
 COPY --from=builder --chown=plataforma:nodejs /app/dist ./dist
 
-# Copy production packages
-COPY --from=builder --chown=plataforma:nodejs /app/packages ./packages
-
 # Copy necessary runtime files
 COPY --from=builder --chown=plataforma:nodejs /app/public ./public
-
-# Copy server files (if needed for production)
-COPY --from=builder --chown=plataforma:nodejs /app/server ./server
-
-# Copy shared files
-COPY --from=builder --chown=plataforma:nodejs /app/shared ./shared
 
 # Create logs and storage directories
 RUN mkdir -p /app/logs /app/storage && \
@@ -125,10 +115,7 @@ USER plataforma
 
 # Set production environment variables
 ENV NODE_ENV=production \
-    PORT=4000 \
-    HOST=0.0.0.0 \
-    NODE_OPTIONS="--max-old-space-size=2048" \
-    LOG_LEVEL=info
+    NODE_OPTIONS="--max-old-space-size=2048"
 
 # Security labels
 LABEL maintainer="plataforma-team" \
@@ -146,11 +133,10 @@ LABEL maintainer="plataforma-team" \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:$PORT/health || exit 1
 
-# Expose port
-EXPOSE 4000
+# Frontend served by Nginx (see nginx stage below)
 
 # Start application with dumb-init for proper signal handling
-CMD ["dumb-init", "node", "dist/server/index.js"]
+# Frontend is served by nginx (see nginx stage)
 
 # Nginx stage for serving static files
 FROM nginx:1.25-alpine as nginx

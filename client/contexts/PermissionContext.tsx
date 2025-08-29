@@ -107,18 +107,39 @@ export const PermissionProvider: React.FC<PermissionProviderProps> = ({
       const params = new URLSearchParams();
       if (module) params.append('module', module);
 
-      const response = await fetch(`/api/my-permissions?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+      // TODO: Implement permissions endpoint in Python backend
+      // For now, return mock permissions based on user role
+      const userRole = user?.role || 'user';
+      
+      // Mock permissions based on role
+      const mockPermissions = {
+        admin: {
+          permissions: [
+            { id: '1', name: '*', description: 'All permissions', moduleName: null }
+          ],
+          roles: [{ id: 'role-1', name: 'admin', displayName: 'Administrator', level: 1 }],
+          maxLevel: 1
+        },
+        manager: {
+          permissions: [
+            { id: '2', name: 'read', description: 'Read access', moduleName: null },
+            { id: '3', name: 'write', description: 'Write access', moduleName: null },
+            { id: '4', name: 'delete', description: 'Delete access', moduleName: null }
+          ],
+          roles: [{ id: 'role-3', name: 'manager', displayName: 'Manager', level: 2 }],
+          maxLevel: 2
+        },
+        user: {
+          permissions: [
+            { id: '5', name: 'read', description: 'Read access', moduleName: null },
+            { id: '6', name: 'write', description: 'Write access', moduleName: null }
+          ],
+          roles: [{ id: 'role-2', name: 'user', displayName: 'User', level: 3 }],
+          maxLevel: 3
         }
-      });
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to load permissions');
-      }
-
-      const result = await response.json();
-      const userPermissions: UserPermissions = result.data;
+      const userPermissions: UserPermissions = mockPermissions[userRole as keyof typeof mockPermissions] || mockPermissions.user;
 
       setPermissions(userPermissions.permissions);
       setRoles(userPermissions.roles);

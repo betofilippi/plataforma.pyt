@@ -23,20 +23,18 @@ services:
       retries: 3
       start_period: 30s
 
-  # Backend (Node.js API server)
+  # Backend (Python FastAPI server)
   backend:
     build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: production
+      context: ./python-backend
+      dockerfile: Dockerfile
     ports:
-      - "4000:4000"
+      - "8001:8001"
     depends_on:
       - postgres
       - redis
     environment:
-      - NODE_ENV=production
-      - PORT=4000
+      - PORT=8001
       - HOST=0.0.0.0
       - DATABASE_URL=postgresql://plataforma:plataforma_password@postgres:5432/plataforma
       - REDIS_URL=redis://redis:6379
@@ -46,7 +44,7 @@ services:
       - plataforma-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3

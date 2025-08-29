@@ -1,0 +1,19 @@
+{
+  "name": "@plataforma/module-template",
+  "version": "1.0.0",
+  "description": "Template for creating new plataforma.app modules",
+  "main": "index.js",
+  "author": "Your Name",
+  "license": "MIT",
+  "platform": {
+    "minVersion": "1.0.0",
+    "maxVersion": "*"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "build": "echo 'Build your module'",
+    "test": "echo 'Test your module'",
+    "install": "echo 'Install module to platform'"
+  }
+}

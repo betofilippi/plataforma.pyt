@@ -9,11 +9,16 @@ import React, {
   ReactNode,
 } from "react";
 import { usePerformanceTracking, performanceMonitor } from '@/lib/performance-utils';
+import { useSessionManager, WindowSessionData } from '@/lib/session-manager';
+import { useAuth } from '@/contexts/AuthContext';
+import { createComponentFromSession } from '@/lib/component-registry';
 
 export interface WindowState {
   id: string;
   title: string;
   component: ReactNode;
+  componentType?: string; // Type identifier for session restoration
+  componentData?: Record<string, any>; // Component state for session persistence
   position: { x: number; y: number };
   size: { width: number; height: number };
   zIndex: number;
@@ -33,6 +38,19 @@ export interface WindowManagerContextType {
   activeWindowId: string | null;
   createWindow: (
     config: Omit<WindowState, "id" | "zIndex" | "isVisible">,
+  ) => string;
+  createWindowWithType: (
+    title: string,
+    component: ReactNode,
+    componentType: string,
+    options?: {
+      position?: { x: number; y: number };
+      size?: { width: number; height: number };
+      icon?: string;
+      canResize?: boolean;
+      canMove?: boolean;
+      componentData?: Record<string, any>;
+    }
   ) => string;
   closeWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
@@ -60,51 +78,77 @@ export const WindowManagerProvider = memo(function WindowManagerProvider({
   const [windows, setWindows] = useState<WindowState[]>([]);
   const [activeWindowId, setActiveWindowId] = useState<string | null>(null);
   const [highestZIndex, setHighestZIndex] = useState(1000);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
+  
+  const { user } = useAuth();
+  const sessionManager = useSessionManager(user?.id || null);
 
-  // Load persisted window states on mount
+  // Load session data when user is available
   useEffect(() => {
-    const savedWindows = localStorage.getItem("planilha_windows_state");
-    if (savedWindows) {
+    if (!user?.id || sessionLoaded) return;
+    
+    const loadUserSession = async () => {
       try {
-        const parsedWindows = JSON.parse(savedWindows);
-        // Only restore position and size, not content
-        setWindows((prev) =>
-          prev.map((window) => {
-            const saved = parsedWindows.find(
-              (w: any) => w.title === window.title,
+        const session = await sessionManager.loadSession(user.id);
+        if (session) {
+          console.log('Loading user session:', session);
+          
+          // Restore windows from session with recreated components
+          const restoredWindows: WindowState[] = session.windowsState.map((windowData: WindowSessionData) => {
+            // Recreate the React component from session data
+            const restoredComponent = createComponentFromSession(
+              windowData.componentType,
+              {
+                windowId: windowData.id,
+                savedState: windowData.componentData,
+                initialProps: {}
+              }
             );
-            return saved
-              ? {
-                  ...window,
-                  position: saved.position,
-                  size: saved.size,
-                  isMinimized: saved.isMinimized,
-                }
-              : window;
-          }),
-        );
-      } catch (error) {
-        console.warn("Failed to load window states:", error);
-      }
-    }
-  }, []);
 
-  // Save window states when they change
+            return {
+              id: windowData.id,
+              title: windowData.title,
+              component: restoredComponent,
+              componentType: windowData.componentType,
+              componentData: windowData.componentData,
+              position: windowData.position,
+              size: windowData.size,
+              zIndex: windowData.zIndex,
+              isMinimized: windowData.isMinimized,
+              isMaximized: windowData.isMaximized,
+              isVisible: windowData.isVisible,
+              icon: windowData.icon,
+              canResize: windowData.canResize,
+              canMove: windowData.canMove,
+              snapPosition: windowData.snapPosition,
+            };
+          });
+          
+          // Only set non-empty windows to avoid clearing current state unnecessarily
+          if (restoredWindows.length > 0) {
+            setWindows(restoredWindows);
+          }
+          
+          setActiveWindowId(session.appState.activeWindowId);
+          setHighestZIndex(session.appState.highestZIndex);
+        }
+        setSessionLoaded(true);
+      } catch (error) {
+        console.error('Failed to load user session:', error);
+        setSessionLoaded(true);
+      }
+    };
+    
+    loadUserSession();
+  }, [user?.id, sessionLoaded, sessionManager]);
+
+  // Save window states using session manager when they change
   useEffect(() => {
-    if (windows.length > 0) {
-      const windowStates = windows.map((w) => ({
-        title: w.title,
-        position: w.position,
-        size: w.size,
-        isMinimized: w.isMinimized,
-        isMaximized: w.isMaximized,
-      }));
-      localStorage.setItem(
-        "planilha_windows_state",
-        JSON.stringify(windowStates),
-      );
-    }
-  }, [windows]);
+    if (!user?.id || !sessionLoaded || windows.length === 0) return;
+    
+    // Use session manager to save window states
+    sessionManager.updateWindowsState(windows, activeWindowId, highestZIndex);
+  }, [windows, activeWindowId, highestZIndex, user?.id, sessionLoaded, sessionManager]);
 
   const getNextZIndex = useCallback(() => {
     setHighestZIndex((prev) => prev + 1);
@@ -122,6 +166,38 @@ export const WindowManagerProvider = memo(function WindowManagerProvider({
       };
       
       console.log("Creating window:", newWindow);
+      setWindows((prev) => {
+        const updated = [...prev, newWindow];
+        console.log("Windows after create:", updated.length);
+        return updated;
+      });
+      setActiveWindowId(id);
+      return id;
+    },
+    [getNextZIndex],
+  );
+
+  const createWindowWithType = useCallback(
+    (title: string, component: ReactNode, componentType: string, options = {}) => {
+      const id = `window-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newWindow: WindowState = {
+        id,
+        title,
+        component,
+        componentType,
+        componentData: options.componentData || {},
+        position: options.position || { x: 100 + Math.random() * 200, y: 100 + Math.random() * 200 },
+        size: options.size || { width: 800, height: 600 },
+        zIndex: getNextZIndex(),
+        isMinimized: false,
+        isMaximized: false,
+        isVisible: true,
+        icon: options.icon,
+        canResize: options.canResize ?? true,
+        canMove: options.canMove ?? true,
+      };
+      
+      console.log("Creating window with type:", newWindow);
       setWindows((prev) => {
         const updated = [...prev, newWindow];
         console.log("Windows after create:", updated.length);
@@ -258,6 +334,7 @@ export const WindowManagerProvider = memo(function WindowManagerProvider({
     windows,
     activeWindowId,
     createWindow,
+    createWindowWithType,
     closeWindow,
     minimizeWindow,
     maximizeWindow,
@@ -271,6 +348,7 @@ export const WindowManagerProvider = memo(function WindowManagerProvider({
     windows,
     activeWindowId,
     createWindow,
+    createWindowWithType,
     closeWindow,
     minimizeWindow,
     maximizeWindow,

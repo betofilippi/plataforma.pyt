@@ -2,9 +2,9 @@
   "ci": {
     "collect": {
       "url": [
-        "http://localhost:3030/",
-        "http://localhost:3030/login",
-        "http://localhost:3030/dashboard"
+        "http://localhost:3333/",
+        "http://localhost:3333/login",
+        "http://localhost:3333/dashboard"
       ],
       "startServerCommand": "npm start",
       "startServerReadyPattern": "Server running on port",

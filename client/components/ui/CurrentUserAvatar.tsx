@@ -77,8 +77,9 @@ export function CurrentUserAvatar({
     }
   };
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role.toLowerCase()) {
+  const getRoleBadgeColor = (role: string | undefined) => {
+    const roleStr = String(role || 'user').toLowerCase();
+    switch (roleStr) {
       case 'admin': return 'bg-red-100 text-red-800 border-red-200';
       case 'developer': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'manager': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -196,7 +197,7 @@ export function CurrentUserAvatar({
               <div className="flex items-center space-x-2 mt-1">
                 <Badge variant="outline" className={`text-xs ${getRoleBadgeColor(user.role)}`}>
                   <Shield className="w-3 h-3 mr-1" />
-                  {user.role}
+                  {String(user.role || 'user')}
                 </Badge>
               </div>
             </div>

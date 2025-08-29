@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { pythonApiClient } from '@/lib/python-api-client';
 
 export interface KPIMetric {
   id: string;
@@ -116,20 +116,20 @@ export function useDashboard() {
         healthResponse,
         settingsResponse
       ] = await Promise.all([
-        axios.get('/api/dashboard/kpis'),
-        axios.get('/api/dashboard/activity?limit=50'),
-        axios.get('/api/dashboard/modules'),
-        axios.get('/api/dashboard/health'),
-        axios.get('/api/dashboard/settings').catch(() => ({ data: { data: settings } })) // Fallback to default settings
+        pythonApiClient.dashboard.getKPIs(),
+        pythonApiClient.dashboard.getActivities(50),
+        pythonApiClient.dashboard.getModules(),
+        pythonApiClient.dashboard.getHealth(),
+        pythonApiClient.dashboard.getSettings().catch(() => settings) // Fallback to default settings
       ]);
 
       // Parse timestamps
-      const activities = activitiesResponse.data.data.map((activity: any) => ({
+      const activities = (activitiesResponse || []).map((activity: any) => ({
         ...activity,
         timestamp: new Date(activity.timestamp)
       }));
 
-      const modules = modulesResponse.data.data.map((module: any) => ({
+      const modules = (modulesResponse || []).map((module: any) => ({
         ...module,
         lastActive: new Date(module.lastActive)
       }));
@@ -148,10 +148,10 @@ export function useDashboard() {
 
       setState(prev => ({
         ...prev,
-        kpis: kpisResponse.data.data,
+        kpis: kpisResponse || [],
         activities,
         modules,
-        health: healthResponse.data.data,
+        health: healthResponse || {},
         userActivities,
         loading: false,
         error: null,
@@ -175,9 +175,9 @@ export function useDashboard() {
 
   const fetchChartData = useCallback(async (type: string, period = '30d') => {
     try {
-      const response = await axios.get(`/api/dashboard/charts/${type}?period=${period}`);
+      const response = await pythonApiClient.dashboard.getChartData(type, period);
       
-      const chartData = response.data.data.map((item: any) => ({
+      const chartData = (response || []).map((item: any) => ({
         ...item,
         date: item.date ? new Date(item.date) : undefined
       }));
@@ -205,12 +205,10 @@ export function useDashboard() {
 
   const exportData = useCallback(async (type: 'kpis' | 'activity' | 'modules', format: 'json' | 'csv' = 'json') => {
     try {
-      const response = await axios.get(`/api/dashboard/export/${type}?format=${format}`, {
-        responseType: format === 'csv' ? 'blob' : 'json'
-      });
+      const response = await pythonApiClient.dashboard.exportData(type, format);
 
-      if (format === 'csv') {
-        const blob = new Blob([response.data], { type: 'text/csv' });
+      if (format === 'csv' && typeof response === 'string') {
+        const blob = new Blob([response], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -241,9 +239,7 @@ export function useDashboard() {
     try {
       const updatedSettings = { ...settings, ...newSettings };
       
-      await axios.put('/api/dashboard/settings', {
-        preferences: updatedSettings
-      });
+      await pythonApiClient.dashboard.updateSettings(updatedSettings);
 
       setSettings(updatedSettings);
     } catch (error) {

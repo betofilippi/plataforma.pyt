@@ -1,0 +1,14 @@
+# ==============================================================================
+# Kubernetes Namespace for Plataforma FastAPI Backend
+# ==============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: plataforma-fastapi
+  labels:
+    app: plataforma-fastapi
+    environment: production
+    version: v1.0.0
+  annotations:
+    description: "Namespace for Plataforma FastAPI backend and related services"

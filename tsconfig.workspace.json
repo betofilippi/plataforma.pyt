@@ -1,15 +1,6 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/types" },
-    { "path": "./packages/core-window-system" },
-    { "path": "./packages/design-system" },
-    { "path": "./packages/auth-system" },
-    { "path": "./packages/sdk" },
-    { "path": "./modules/database" },
-    { "path": "./modules/sistema" },
-    { "path": "./modules/marketplace" },
-    { "path": "./modules/vendas" },
     { "path": "." }
   ]
 }

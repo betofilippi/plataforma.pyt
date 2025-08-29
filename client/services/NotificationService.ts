@@ -1,4 +1,5 @@
-import { io, Socket } from 'socket.io-client';
+import { pythonApiClient } from '@/lib/python-api-client';
+import { PYTHON_API_URLS } from '@/lib/api-config';
 
 export interface Notification {
   id: string;
@@ -70,92 +71,95 @@ type CriticalNotificationHandler = (event: NotificationEvent) => void;
 type StatsUpdateHandler = (stats: NotificationStats) => void;
 
 class NotificationServiceClass {
-  private socket: Socket | null = null;
+  private websocket: WebSocket | null = null;
   private eventHandlers: Map<string, NotificationEventHandler[]> = new Map();
   private criticalHandlers: CriticalNotificationHandler[] = [];
   private statsHandlers: StatsUpdateHandler[] = [];
   private isConnected = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
+  private reconnectTimer: NodeJS.Timeout | null = null;
 
   // ===== CONEXÃO WEBSOCKET =====
 
   async connect(token: string): Promise<void> {
-    if (this.socket?.connected) {
+    if (this.websocket?.readyState === WebSocket.OPEN) {
       return;
     }
 
     return new Promise((resolve, reject) => {
-      this.socket = io(`ws://localhost:4000`, {
-        auth: { token },
-        transports: ['websocket', 'polling'],
-        timeout: 10000,
-        forceNew: true
-      });
+      try {
+        const wsUrl = PYTHON_API_URLS.websocket.replace('http', 'ws');
+        this.websocket = new WebSocket(`${wsUrl}?token=${encodeURIComponent(token)}`);
 
-      this.socket.on('connect', () => {
-        console.log('Notification service connected to WebSocket');
-        this.isConnected = true;
-        this.reconnectAttempts = 0;
-        this.setupEventHandlers();
-        resolve();
-      });
+        this.websocket.onopen = () => {
+          console.log('Notification service connected to WebSocket');
+          this.isConnected = true;
+          this.reconnectAttempts = 0;
+          resolve();
+        };
 
-      this.socket.on('connect_error', (error) => {
-        console.error('Notification service connection error:', error);
-        this.isConnected = false;
+        this.websocket.onerror = (error) => {
+          console.error('Notification service connection error:', error);
+          this.isConnected = false;
+          reject(error);
+        };
+
+        this.websocket.onclose = (event) => {
+          console.log('Notification service disconnected:', event.code, event.reason);
+          this.isConnected = false;
+          this.handleDisconnection(token);
+        };
+
+        this.websocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            this.handleMessage(data);
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
+
+      } catch (error) {
         reject(error);
-      });
-
-      this.socket.on('disconnect', (reason) => {
-        console.log('Notification service disconnected:', reason);
-        this.isConnected = false;
-        this.handleDisconnection();
-      });
+      }
     });
   }
 
   disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    if (this.websocket) {
+      this.websocket.close();
+      this.websocket = null;
       this.isConnected = false;
     }
   }
 
-  private setupEventHandlers(): void {
-    if (!this.socket) return;
-
-    // Eventos de notificação
-    this.socket.on('notification_event', (event: NotificationEvent) => {
-      this.handleNotificationEvent(event);
-    });
-
-    this.socket.on('critical_notification', (event: NotificationEvent) => {
-      this.handleCriticalNotification(event);
-    });
-
-    this.socket.on('notification_read_sync', (data: { notificationId: string; userId: string }) => {
-      // Sincronizar leitura entre sessões do mesmo usuário
-      this.handleNotificationReadSync(data);
-    });
-
-    this.socket.on('notification_subscription_confirmed', (data: any) => {
-      console.log('Notification subscription confirmed:', data);
-    });
+  private handleMessage(data: any): void {
+    if (data.type === 'notification_event') {
+      this.handleNotificationEvent(data.payload);
+    } else if (data.type === 'critical_notification') {
+      this.handleCriticalNotification(data.payload);
+    } else if (data.type === 'notification_read_sync') {
+      this.handleNotificationReadSync(data.payload);
+    }
   }
 
-  private handleDisconnection(): void {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+  private handleDisconnection(token?: string): void {
+    if (this.reconnectAttempts < this.maxReconnectAttempts && token) {
       this.reconnectAttempts++;
       const delay = Math.pow(2, this.reconnectAttempts) * 1000; // Exponential backoff
       
       console.log(`Attempting to reconnect notification service (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${delay}ms`);
       
-      setTimeout(() => {
-        if (this.socket && !this.socket.connected) {
-          this.socket.connect();
-        }
+      this.reconnectTimer = setTimeout(() => {
+        this.connect(token).catch(error => {
+          console.error('Reconnection failed:', error);
+        });
       }, delay);
     } else {
       console.error('Max reconnection attempts reached for notification service');
@@ -220,21 +224,26 @@ class NotificationServiceClass {
     modules?: string[];
     priorities?: string[];
   } = {}): void {
-    if (!this.socket?.connected) {
+    if (!this.isConnected || !this.websocket) {
       console.warn('Cannot subscribe to notifications: not connected');
       return;
     }
 
-    this.socket.emit('subscribe_notifications', options);
+    this.websocket.send(JSON.stringify({
+      type: 'subscribe_notifications',
+      payload: options
+    }));
   }
 
   unsubscribeFromNotifications(): void {
-    if (!this.socket?.connected) {
+    if (!this.isConnected || !this.websocket) {
       console.warn('Cannot unsubscribe from notifications: not connected');
       return;
     }
 
-    this.socket.emit('unsubscribe_notifications');
+    this.websocket.send(JSON.stringify({
+      type: 'unsubscribe_notifications'
+    }));
   }
 
   // ===== EVENT HANDLERS =====
@@ -284,124 +293,82 @@ class NotificationServiceClass {
     total: number;
     pagination: any;
   }> {
-    const queryParams = new URLSearchParams();
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, String(value));
-      }
-    });
-
-    const response = await fetch(`/api/notifications?${queryParams}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const result = await pythonApiClient.notifications.list(params);
+      return {
+        notifications: result.items || [],
+        total: result.total || 0,
+        pagination: result.pagination || {}
+      };
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return { notifications: [], total: 0, pagination: {} };
     }
-
-    const result = await response.json();
-    return result;
   }
 
   async markAsRead(notificationId: string): Promise<void> {
-    const response = await fetch(`/api/notifications/${notificationId}/read`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+    try {
+      await pythonApiClient.notifications.markAsRead(notificationId);
+      
+      // Também enviar via WebSocket para sincronização em tempo real
+      if (this.isConnected && this.websocket) {
+        this.websocket.send(JSON.stringify({
+          type: 'notification_read',
+          payload: { notificationId }
+        }));
       }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    // Também enviar via WebSocket para sincronização em tempo real
-    if (this.socket?.connected) {
-      this.socket.emit('notification_read', { notificationId });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
     }
   }
 
   async markAllAsRead(category?: string, moduleId?: string): Promise<number> {
-    const response = await fetch('/api/notifications/read-all', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ category, module_name: moduleId })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const result = await pythonApiClient.notifications.markAllAsRead({ category, module_name: moduleId });
+      return result.count || 0;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
     }
-
-    const result = await response.json();
-    return result.count;
   }
 
   async archiveNotification(notificationId: string): Promise<void> {
-    const response = await fetch(`/api/notifications/${notificationId}/archive`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      await pythonApiClient.notifications.archive(notificationId);
+    } catch (error) {
+      console.error('Error archiving notification:', error);
+      throw error;
     }
   }
 
   async deleteNotification(notificationId: string): Promise<void> {
-    const response = await fetch(`/api/notifications/${notificationId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      await pythonApiClient.notifications.delete(notificationId);
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
     }
   }
 
   async getStats(): Promise<NotificationStats> {
-    const response = await fetch('/api/notifications/stats', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const result = await pythonApiClient.notifications.getStats();
+      return result;
+    } catch (error) {
+      console.error('Error fetching notification stats:', error);
+      throw error;
     }
-
-    const result = await response.json();
-    return result.data;
   }
 
   async getPreferences(): Promise<NotificationPreference[]> {
-    const response = await fetch('/api/notifications/preferences', {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const result = await pythonApiClient.notifications.getPreferences();
+      return result;
+    } catch (error) {
+      console.error('Error fetching notification preferences:', error);
+      return [];
     }
-
-    const result = await response.json();
-    return result.data;
   }
 
   async updatePreferences(
@@ -409,25 +376,17 @@ class NotificationServiceClass {
     moduleId: string | null,
     preferences: Partial<NotificationPreference>
   ): Promise<NotificationPreference> {
-    const response = await fetch('/api/notifications/preferences', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
+    try {
+      const result = await pythonApiClient.notifications.updatePreferences([{
         category,
         module_name: moduleId,
         ...preferences
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      }]);
+      return result[0] || preferences as NotificationPreference;
+    } catch (error) {
+      console.error('Error updating notification preferences:', error);
+      throw error;
     }
-
-    const result = await response.json();
-    return result.data;
   }
 
   // ===== BROWSER NOTIFICATIONS =====
@@ -502,9 +461,10 @@ class NotificationServiceClass {
   }
 
   getConnectionStatus(): 'connected' | 'connecting' | 'disconnected' {
-    if (!this.socket) return 'disconnected';
-    if (this.socket.connected) return 'connected';
-    return 'connecting';
+    if (!this.websocket) return 'disconnected';
+    if (this.websocket.readyState === WebSocket.OPEN) return 'connected';
+    if (this.websocket.readyState === WebSocket.CONNECTING) return 'connecting';
+    return 'disconnected';
   }
 }
 

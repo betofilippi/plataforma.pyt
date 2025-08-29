@@ -10,90 +10,70 @@ import {
   WindowButton, 
   WindowInput, 
   WindowSelect, 
-  WindowToggle 
+  WindowToggle,
+  ModuleIcon,
+  ContextMenu, 
+  useContextMenu, 
+  getStandardModuleContextOptions 
 } from '@/components/ui';
-import { LayoutDashboard as LayoutIcon } from "lucide-react";
+import { LayoutDashboard as LayoutIcon, Users as UsersIcon, Palette as PaletteIcon } from "lucide-react";
+import UserManagement from '@/components/UserManagement';
+import DesignSystemShowcase from '@/components/DesignSystemShowcase';
+import { useAuth } from '@/contexts/AuthContext';
 import WindowTemplate from '@/components/windows/WindowTemplate';
 import { TablesTemplate } from './windows/TablesTemplate';
 import { FileExplorer } from './windows/FileExplorer';
-import { STANDARD_ICON_CLASSES } from '@/lib/constants/icon-sizes';
-import { ContextMenu, useContextMenu, getStandardModuleContextOptions } from '@/components/ui';
-import { getModuleColor } from '@/lib/module-colors';
+import { UI_CONTEXTS } from '@/lib/ui-standards';
 import DocumentExplorerReal from '@/components/DocumentExplorerReal';
 
-// Configuration icon component with Material-UI icons
-function ModuleIcon({
-  module,
-  onClick,
-}: {
-  module: {
-    id: string;
-    name: string;
-    icon: React.ComponentType<any>;
-    color: string;
-  };
-  onClick: () => void;
-}) {
-  const IconComponent = module.icon;
-  const { contextMenu, showContextMenu, hideContextMenu } = useContextMenu();
-  const moduleColor = getModuleColor('sistema');
-
-  const contextOptions = getStandardModuleContextOptions(
-    module.name,
-    onClick,
-    () => console.log(`Informações sobre ${module.name}`),
-    () => console.log(`Atualizando ${module.name}`)
-  );
-
-  return (
-    <>
-      <div
-        onClick={onClick}
-        onContextMenu={showContextMenu}
-        className="group relative transition-all duration-300 cursor-pointer hover:scale-105"
-      >
-        <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-all duration-300">
-          <IconComponent
-            className="w-16 h-16 drop-shadow-lg"
-            style={{
-              color: moduleColor.primary,
-              filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.5))",
-            }}
-          />
-        </div>
-        <div className="w-44 text-center mx-auto">
-          <span
-            className="font-semibold text-xs leading-tight drop-shadow-lg block text-white"
-          >
-            {module.name}
-          </span>
-        </div>
-      </div>
-      
-      <ContextMenu
-        show={contextMenu.show}
-        x={contextMenu.x}
-        y={contextMenu.y}
-        onClose={hideContextMenu}
-        options={contextOptions}
-      />
-    </>
-  );
-}
+// Agora usando o ModuleIcon padronizado do design system
 
 // Componente principal do desktop do sistema
 function SistemaDesktopContent() {
   const createWindow = useCreateWindow();
+  const { createWindowWithType } = useWindowManager();
+  const { user } = useAuth();
   // Path específico do módulo sistema
   const rootPath = 'C:\\Users\\Beto\\OneDrive - NXT Indústria e Comércio Ltda\\dev\\plataforma.app\\sistema';
 
+  // Verificar se usuário é admin
+  const isAdmin = user?.role === 'admin' || user?.roles?.includes('admin');
+
   const handleOpenTemplate = () => {
-    createWindow(
+    createWindowWithType(
       'Template de Janelas - Design System',
       <WindowTemplate />,
+      'WindowTemplate',
       {
         size: { width: 1000, height: 700 },
-        position: { x: 150, y: 50 }
+        position: { x: 150, y: 50 },
+        icon: 'LayoutDashboard'
+      }
+    );
+  };
+
+  const handleOpenUserManagement = () => {
+    createWindowWithType(
+      'Gerenciamento de Usuários',
+      <UserManagement />,
+      'UserManagement',
+      {
+        size: { width: 1200, height: 800 },
+        position: { x: 100, y: 100 },
+        icon: 'Users'
+      }
+    );
+  };
+
+  const handleOpenDesignSystem = () => {
+    createWindowWithType(
+      'Design System Showcase',
+      <DesignSystemShowcase />,
+      'DesignSystemShowcase',
+      {
+        size: { width: 1400, height: 900 },
+        position: { x: 50, y: 50 },
+        icon: 'Palette'
       }
     );
   };
@@ -105,17 +85,41 @@ function SistemaDesktopContent() {
       {/* Desktop Icons Grid */}
       <div className="absolute top-32 left-12">
         <div className="grid grid-cols-6 gap-6">
-          {/* Template de Janelas Icon */}
+          {/* Template de Janelas Icon - Contexto sistema */}
           <ModuleIcon
             module={{
               id: "template-janelas",
               name: "TEMPLATE DE JANELAS",
               icon: LayoutIcon,
-              color: getModuleColor('sistema').gradient,
+              contextModule: "sistema", // Define o contexto do módulo
             }}
             onClick={handleOpenTemplate}
           />
+
+          {/* Design System Showcase Icon - Contexto sistema */}
+          <ModuleIcon
+            module={{
+              id: "design-system",
+              name: "DESIGN SYSTEM",
+              icon: PaletteIcon,
+              contextModule: "sistema",    // Background será do contexto sistema
+            }}
+            onClick={handleOpenDesignSystem}
+          />
           
+          {/* Users Management Icon - Só visível para admin - Contexto admin em sistema */}
+          {isAdmin && (
+            <ModuleIcon
+              module={{
+                id: "users",
+                name: "USUÁRIOS",
+                icon: UsersIcon,
+                contextModule: "sistema",    // Background será do contexto sistema
+                contextFunction: "admin",    // Foreground será da função admin
+              }}
+              onClick={handleOpenUserManagement}
+            />
+          )}
           
         </div>
       </div>

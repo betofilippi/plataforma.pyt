@@ -1,17 +1,35 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from 'react';
-import axios, { AxiosError } from 'axios';
-import { API_URLS } from '@/lib/api-config';
+import pythonApiClient from '@/lib/python-api-client';
+import type { ApiError } from '@/lib/python-api-client';
+import { PYTHON_API_URLS } from '@/lib/api-config';
+import { useSessionManager } from '@/lib/session-manager';
 
-// Types
+// Types - Updated to match Python backend response with backward compatibility
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: string;
-  avatarUrl?: string;
-  lastLogin?: string;
-  createdAt: string;
-  metadata?: Record<string, any>;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  roles: string[];
+  permissions: string[];
+  is_active: boolean;
+  email_verified_at?: string;
+  last_login_at?: string;
+  created_at: string;
+  updated_at: string;
+  preferences?: Record<string, any>;
+  timezone?: string;
+  language?: string;
+  theme?: string;
+  
+  // Backward compatibility properties (computed from new fields)
+  role: string; // Will be roles[0] or 'user'
+  avatarUrl?: string; // Alias for avatar_url
+  lastLogin?: string; // Alias for last_login_at
+  createdAt: string; // Alias for created_at
+  metadata?: Record<string, any>; // Alias for preferences
 }
 
 export interface AuthState {
@@ -21,6 +39,8 @@ export interface AuthState {
   error: string | null;
   accessToken: string | null;
   expiresAt: number | null;
+  registrationSuccess?: boolean;
+  emailVerificationRequired?: boolean;
 }
 
 export interface LoginCredentials {
@@ -29,27 +49,45 @@ export interface LoginCredentials {
   rememberMe?: boolean;
 }
 
+export interface RegistrationCredentials {
+  email: string;
+  password: string;
+  password_confirm: string;
+  name: string;
+  department?: string;
+  job_title?: string;
+  phone?: string;
+  terms_accepted: boolean;
+  privacy_policy_accepted: boolean;
+}
+
 export interface AuthResponse {
   success: boolean;
   message: string;
-  data?: {
-    user: User;
-    accessToken: string;
-    expiresIn: number;
-    tokenType: string;
+  tokens?: {
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_expires_in: number;
   };
-  code?: string;
+  user?: User;
+  mfa_required?: boolean;
+  session_id?: string;
+  warnings?: string[];
 }
 
 // Action types
 type AuthAction =
   | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: { user: User; accessToken: string; expiresIn: number } }
+  | { type: 'AUTH_SUCCESS'; payload: { user: User; accessToken: string; refreshToken: string; expiresIn: number } }
   | { type: 'AUTH_FAILURE'; payload: string }
   | { type: 'AUTH_LOGOUT' }
   | { type: 'AUTH_CLEAR_ERROR' }
-  | { type: 'AUTH_UPDATE_TOKEN'; payload: { accessToken: string; expiresIn: number } }
-  | { type: 'AUTH_UPDATE_USER'; payload: User };
+  | { type: 'AUTH_UPDATE_TOKEN'; payload: { accessToken: string; refreshToken?: string; expiresIn: number } }
+  | { type: 'AUTH_UPDATE_USER'; payload: User }
+  | { type: 'REGISTRATION_SUCCESS'; payload: { emailVerificationRequired: boolean } }
+  | { type: 'REGISTRATION_FAILURE'; payload: string };
 
 // Initial state
 const initialState: AuthState = {
@@ -59,6 +97,8 @@ const initialState: AuthState = {
   error: null,
   accessToken: null,
   expiresAt: null,
+  registrationSuccess: false,
+  emailVerificationRequired: false,
 };
 
 // Reducer
@@ -124,6 +164,24 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         user: action.payload,
       };
 
+    case 'REGISTRATION_SUCCESS':
+      return {
+        ...state,
+        registrationSuccess: true,
+        emailVerificationRequired: action.payload.emailVerificationRequired,
+        isLoading: false,
+        error: null,
+      };
+
+    case 'REGISTRATION_FAILURE':
+      return {
+        ...state,
+        registrationSuccess: false,
+        emailVerificationRequired: false,
+        isLoading: false,
+        error: action.payload,
+      };
+
     default:
       return state;
   }
@@ -132,6 +190,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 // Context
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<AuthResponse>;
+  register: (userData: RegistrationCredentials) => Promise<{ success: boolean; message: string; emailVerificationRequired?: boolean }>;
   socialLogin: (provider: 'google' | 'github' | 'discord') => Promise<void>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
@@ -139,24 +198,19 @@ interface AuthContextType extends AuthState {
   clearError: () => void;
   updateUser: (user: User) => void;
   checkAuthStatus: () => Promise<void>;
+  clearRegistrationState: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// API Configuration
-const API_BASE_URL = API_URLS.auth;
+// API Configuration - Using Python backend
+const API_BASE_URL = PYTHON_API_URLS.auth;
 
-// Create axios instance with interceptors
-const authApi = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, // Important for HTTP-only cookies
-  timeout: 10000,
-});
-
-// Storage utilities
-const TOKEN_STORAGE_KEY = 'plataforma_access_token';
-const TOKEN_EXPIRY_KEY = 'plataforma_token_expiry';
-const USER_STORAGE_KEY = 'plataforma_user';
+// Storage utilities - Updated for Python backend
+const TOKEN_STORAGE_KEY = 'pythonAccessToken';
+const REFRESH_TOKEN_STORAGE_KEY = 'pythonRefreshToken';
+const TOKEN_EXPIRY_KEY = 'pythonTokenExpiry';
+const USER_STORAGE_KEY = 'pythonCurrentUser';
 
 const tokenStorage = {
   get: () => {
@@ -175,9 +229,26 @@ const tokenStorage = {
     }
   },
   
+  getRefreshToken: () => {
+    try {
+      return localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  },
+  
+  setRefreshToken: (token: string) => {
+    try {
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token);
+    } catch (error) {
+      console.warn('Failed to store refresh token:', error);
+    }
+  },
+  
   remove: () => {
     try {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
       localStorage.removeItem(TOKEN_EXPIRY_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
     } catch (error) {
@@ -218,6 +289,42 @@ const tokenStorage = {
     } catch (error) {
       console.warn('Failed to store user:', error);
     }
+  },
+  
+  // Helper to ensure backward compatibility when getting user
+  getUserWithCompatibility: (): User | null => {
+    try {
+      const userStr = localStorage.getItem(USER_STORAGE_KEY);
+      if (!userStr) return null;
+      
+      const user = JSON.parse(userStr);
+      
+      // Ensure backward compatibility properties exist
+      if (user && !user.role && user.roles) {
+        user.role = user.roles[0] || 'user';
+      }
+      // CRUCIAL: Ensure roles array exists (for admin detection)
+      if (user && !user.roles && user.role) {
+        user.roles = [user.role];
+      }
+      if (user && !user.avatarUrl && user.avatar_url) {
+        user.avatarUrl = user.avatar_url;
+      }
+      if (user && !user.lastLogin && user.last_login_at) {
+        user.lastLogin = user.last_login_at;
+      }
+      if (user && !user.createdAt && user.created_at) {
+        user.createdAt = user.created_at;
+      }
+      if (user && !user.metadata && user.preferences) {
+        user.metadata = user.preferences;
+      }
+      
+      return user;
+    } catch (error) {
+      console.warn('Failed to get user from storage:', error);
+      return null;
+    }
   }
 };
 
@@ -228,58 +335,14 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  
+  // Session manager for user session persistence
+  const sessionManager = useSessionManager(state.user?.id || null);
 
-  // Setup axios interceptors
-  useEffect(() => {
-    // Request interceptor to add token
-    const requestInterceptor = authApi.interceptors.request.use(
-      (config) => {
-        if (state.accessToken) {
-          config.headers.Authorization = `Bearer ${state.accessToken}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
+  // Python API client handles token management automatically
+  // No need for manual interceptor setup
 
-    // Response interceptor for token refresh
-    const responseInterceptor = authApi.interceptors.response.use(
-      (response) => response,
-      async (error: AxiosError) => {
-        const originalRequest = error.config as any;
-
-        // If token expired, try to refresh
-        if (
-          error.response?.status === 401 &&
-          !originalRequest._retry &&
-          state.accessToken
-        ) {
-          originalRequest._retry = true;
-
-          try {
-            const refreshed = await refreshToken();
-            if (refreshed && originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${state.accessToken}`;
-              return authApi(originalRequest);
-            }
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
-            dispatch({ type: 'AUTH_LOGOUT' });
-            tokenStorage.remove();
-          }
-        }
-
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      authApi.interceptors.request.eject(requestInterceptor);
-      authApi.interceptors.response.eject(responseInterceptor);
-    };
-  }, [state.accessToken]);
-
-  // Check authentication status on mount - SIMPLIFIED WITH ERROR HANDLING
+  // Check authentication status on mount - Updated for Python backend
   useEffect(() => {
     console.log("🔍 AuthContext - Checking auth status on mount");
     
@@ -287,23 +350,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Try to restore session from localStorage
       const storedToken = tokenStorage.get();
-      const storedUser = tokenStorage.getUser();
+      const storedRefreshToken = tokenStorage.getRefreshToken();
+      const storedUser = tokenStorage.getUserWithCompatibility();
       const storedExpiry = tokenStorage.getExpiry();
       
-      if (storedToken && storedUser && storedExpiry && Date.now() < storedExpiry) {
-        console.log("✅ Restoring session for user:", storedUser.email);
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: {
-            user: storedUser,
-            accessToken: storedToken,
-            expiresIn: Math.floor((storedExpiry - Date.now()) / 1000),
-          },
-        });
+      if (storedToken && storedRefreshToken && storedUser && storedExpiry) {
+        if (Date.now() < storedExpiry) {
+          // Token is still valid
+          console.log("✅ Restoring valid session for user:", storedUser.email);
+          dispatch({
+            type: 'AUTH_SUCCESS',
+            payload: {
+              user: storedUser,
+              accessToken: storedToken,
+              refreshToken: storedRefreshToken,
+              expiresIn: Math.floor((storedExpiry - Date.now()) / 1000),
+            },
+          });
+        } else {
+          // Token expired, try to refresh
+          console.log("⏰ Token expired, attempting refresh for user:", storedUser.email);
+          refreshToken().then((success) => {
+            if (!success) {
+              console.log("❌ Token refresh failed, clearing session");
+              dispatch({ type: 'AUTH_FAILURE', payload: 'Session expired' });
+            }
+          }).catch(() => {
+            console.log("❌ Token refresh error, clearing session");
+            dispatch({ type: 'AUTH_FAILURE', payload: 'Session expired' });
+          });
+        }
       } else {
         console.log("⚠️ No valid stored session found, user needs to login");
         // Ensure auth failure is properly dispatched so login screen shows
         dispatch({ type: 'AUTH_FAILURE', payload: 'No valid session' });
+        // Clean up any partial data
+        tokenStorage.remove();
       }
     } catch (error) {
       console.error("❌ Error checking auth status:", error);
@@ -332,43 +414,80 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => clearTimeout(timer);
   }, [state.expiresAt, state.accessToken]);
 
-  // Login function
+  // Login function - Updated for Python backend
   const login = useCallback(async (credentials: LoginCredentials): Promise<AuthResponse> => {
     dispatch({ type: 'AUTH_START' });
 
     try {
-      const response = await authApi.post<AuthResponse>('/login', credentials);
-      const { data } = response.data;
+      const response = await pythonApiClient.login({
+        email: credentials.email,
+        password: credentials.password,
+        remember_me: credentials.rememberMe || false,
+      });
 
-      if (response.data.success && data) {
-        console.log("🔐 AuthContext - Login successful, user:", data.user);
+      if (response.success && response.tokens && response.user) {
+        console.log("🔐 AuthContext - Login successful, user:", response.user.email);
+        
+        // Create backward-compatible user object
+        const compatibleUser: User = {
+          ...response.user,
+          role: response.user.role || response.user.roles?.[0] || 'user',
+          roles: response.user.roles || [response.user.role || 'user'],
+          avatarUrl: response.user.avatar_url,
+          lastLogin: response.user.last_login_at,
+          createdAt: response.user.created_at,
+          metadata: response.user.preferences,
+        };
         
         dispatch({
           type: 'AUTH_SUCCESS',
           payload: {
-            user: data.user,
-            accessToken: data.accessToken,
-            expiresIn: data.expiresIn,
+            user: compatibleUser,
+            accessToken: response.tokens.access_token,
+            refreshToken: response.tokens.refresh_token,
+            expiresIn: response.tokens.expires_in,
           },
         });
-
-        // Store token and user in localStorage
-        tokenStorage.set(data.accessToken);
-        tokenStorage.setExpiry(Date.now() + data.expiresIn * 1000);
-        tokenStorage.setUser(data.user);
         
-        console.log("💾 Token and user saved to localStorage");
+        // Store tokens and user in localStorage
+        tokenStorage.set(response.tokens.access_token);
+        tokenStorage.setRefreshToken(response.tokens.refresh_token);
+        tokenStorage.setExpiry(Date.now() + response.tokens.expires_in * 1000);
+        tokenStorage.setUser(compatibleUser);
         
-        // Set the token in axios default headers immediately
-        authApi.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+        console.log("💾 Tokens and user saved to localStorage");
         
-        // No need to verify profile in demo mode - we already have the user data
+        // Create or load user session for window state persistence
+        try {
+          const existingSession = await sessionManager.loadSession(compatibleUser.id);
+          if (!existingSession) {
+            // Create a new empty session for first-time users
+            const newSession = sessionManager.createEmptySession(compatibleUser.id);
+            console.log("🆕 Created new user session:", newSession.sessionId);
+          } else {
+            console.log("📁 Loaded existing user session:", existingSession.sessionId);
+          }
+        } catch (error) {
+          console.warn("Failed to load user session, but login continues:", error);
+        }
         
-        return response.data;
+        return {
+          success: response.success,
+          message: response.message,
+          tokens: response.tokens,
+          user: response.user,
+          mfa_required: response.mfa_required,
+          session_id: response.session_id,
+          warnings: response.warnings,
+        };
       } else {
-        const error = response.data.message || 'Login failed';
+        const error = response.message || 'Login failed';
         dispatch({ type: 'AUTH_FAILURE', payload: error });
-        return response.data;
+        return {
+          success: false,
+          message: error,
+          mfa_required: response.mfa_required,
+        };
       }
     } catch (error) {
       const errorMessage = getErrorMessage(error);
@@ -376,86 +495,101 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return {
         success: false,
         message: errorMessage,
-        code: 'LOGIN_ERROR'
       };
     }
   }, []);
 
-  // Social Login function
+  // Social Login function - Removed for Python backend (not implemented yet)
   const socialLogin = useCallback(async (provider: 'google' | 'github' | 'discord'): Promise<void> => {
-    const { supabase } = await import('@/lib/supabase');
-    
-    try {
-      dispatch({ type: 'AUTH_START' });
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      // OAuth redirect will happen automatically
-      // No need to handle response here as the user will be redirected
-      
-    } catch (error: any) {
-      console.error('Social login error:', error);
-      dispatch({ type: 'AUTH_FAILURE', payload: error.message || `Failed to login with ${provider}` });
-      throw error;
-    }
+    dispatch({ type: 'AUTH_FAILURE', payload: 'Social login not implemented in Python backend yet' });
+    throw new Error('Social login not implemented in Python backend yet');
   }, []);
 
-  // Logout function
+  // Logout function - Updated for Python backend
   const logout = useCallback(async (): Promise<void> => {
     try {
-      await authApi.post('/logout');
+      const refreshToken = tokenStorage.getRefreshToken();
+      await pythonApiClient.logout({
+        refresh_token: refreshToken || undefined,
+        logout_all_sessions: false,
+      });
     } catch (error) {
       console.error('Logout API call failed:', error);
     } finally {
+      // Force save current session before logout
+      try {
+        if (state.user?.id) {
+          await sessionManager.forceSave();
+          console.log("💾 Session saved before logout");
+        }
+      } catch (error) {
+        console.warn("Failed to save session before logout:", error);
+      }
+      
       dispatch({ type: 'AUTH_LOGOUT' });
       tokenStorage.remove();
     }
-  }, []);
+  }, [state.user?.id, sessionManager]);
 
-  // Logout from all devices
+  // Logout from all devices - Updated for Python backend
   const logoutAll = useCallback(async (): Promise<void> => {
     try {
-      await authApi.post('/logout-all');
+      const refreshToken = tokenStorage.getRefreshToken();
+      await pythonApiClient.logout({
+        refresh_token: refreshToken || undefined,
+        logout_all_sessions: true,
+      });
     } catch (error) {
       console.error('Logout all API call failed:', error);
     } finally {
+      // Clear session when logging out from all devices
+      try {
+        if (state.user?.id) {
+          await sessionManager.clearSession();
+          console.log("🗑️ Session cleared for logout all");
+        }
+      } catch (error) {
+        console.warn("Failed to clear session during logout all:", error);
+      }
+      
       dispatch({ type: 'AUTH_LOGOUT' });
       tokenStorage.remove();
     }
-  }, []);
+  }, [state.user?.id, sessionManager]);
 
-  // Refresh token function
+  // Refresh token function - Updated for Python backend
   const refreshToken = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await authApi.post<AuthResponse>('/refresh');
+      const refreshToken = tokenStorage.getRefreshToken();
+      if (!refreshToken) {
+        console.error('No refresh token available');
+        dispatch({ type: 'AUTH_LOGOUT' });
+        tokenStorage.remove();
+        return false;
+      }
+
+      const response = await pythonApiClient.refreshToken({
+        refresh_token: refreshToken,
+      });
       
-      if (response.data.success && response.data.data) {
-        const { accessToken, expiresIn } = response.data.data;
+      if (response.success && response.tokens) {
+        const { access_token, refresh_token, expires_in } = response.tokens;
         
         dispatch({
           type: 'AUTH_UPDATE_TOKEN',
-          payload: { accessToken, expiresIn },
+          payload: { 
+            accessToken: access_token, 
+            refreshToken: refresh_token,
+            expiresIn: expires_in 
+          },
         });
 
-        // Update stored token
-        tokenStorage.set(accessToken);
-        tokenStorage.setExpiry(Date.now() + expiresIn * 1000);
-        
-        // Update axios default headers
-        authApi.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        // Update stored tokens
+        tokenStorage.set(access_token);
+        if (refresh_token) {
+          tokenStorage.setRefreshToken(refresh_token);
+        }
+        tokenStorage.setExpiry(Date.now() + expires_in * 1000);
 
         return true;
       }
@@ -469,38 +603,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  // Check auth status (used on app initialization)
+  // Check auth status (used on app initialization) - Updated for Python backend
   const checkAuthStatus = useCallback(async (): Promise<void> => {
     console.log("🔍 checkAuthStatus called");
     
     try {
-      // Check if we have a stored token
+      // Check if we have stored tokens
       const storedToken = tokenStorage.get();
+      const storedRefreshToken = tokenStorage.getRefreshToken();
       const storedExpiry = tokenStorage.getExpiry();
       
-      console.log("📦 Stored token:", storedToken ? "exists" : "none");
+      console.log("📦 Stored access token:", storedToken ? "exists" : "none");
+      console.log("📦 Stored refresh token:", storedRefreshToken ? "exists" : "none");
       console.log("⏰ Stored expiry:", storedExpiry);
 
-      if (!storedToken || !storedExpiry) {
-        console.log("❌ No token or expiry, logging out");
-        dispatch({ type: 'AUTH_LOGOUT' });
-        return;
-      }
-
-      // Check if token is expired
-      if (Date.now() >= storedExpiry) {
-        console.log("⏰ Token expired, clearing");
-        // Token expired, clear it
+      if (!storedToken || !storedRefreshToken || !storedExpiry) {
+        console.log("❌ Missing tokens or expiry, logging out");
         dispatch({ type: 'AUTH_LOGOUT' });
         tokenStorage.remove();
         return;
       }
 
-      // Token is valid! Set it in the header
-      authApi.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      // Check if token is expired
+      if (Date.now() >= storedExpiry) {
+        console.log("⏰ Token expired, attempting refresh");
+        const refreshed = await refreshToken();
+        if (!refreshed) {
+          console.log("❌ Token refresh failed, clearing session");
+          dispatch({ type: 'AUTH_LOGOUT' });
+          tokenStorage.remove();
+        }
+        return;
+      }
       
-      // Get the saved user from localStorage
-      const savedUser = tokenStorage.getUser();
+      // Get the saved user from localStorage with compatibility
+      const savedUser = tokenStorage.getUserWithCompatibility();
       
       if (!savedUser) {
         console.log("⚠️ Token exists but no user data, clearing session");
@@ -509,13 +646,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
       
-      console.log("✅ Valid token and user found, restoring session");
+      console.log("✅ Valid tokens and user found, restoring session");
       
       dispatch({
         type: 'AUTH_SUCCESS',
         payload: {
           user: savedUser,
           accessToken: storedToken,
+          refreshToken: storedRefreshToken,
           expiresIn: Math.floor((storedExpiry - Date.now()) / 1000),
         },
       });
@@ -526,21 +664,81 @@ export function AuthProvider({ children }: AuthProviderProps) {
       dispatch({ type: 'AUTH_LOGOUT' });
       tokenStorage.remove();
     }
-  }, []);
+  }, [refreshToken]);
 
   // Clear error function
   const clearError = useCallback(() => {
     dispatch({ type: 'AUTH_CLEAR_ERROR' });
   }, []);
 
+  // Clear registration state function
+  const clearRegistrationState = useCallback(() => {
+    dispatch({ type: 'AUTH_CLEAR_ERROR' });
+  }, []);
+
   // Update user function
   const updateUser = useCallback((user: User) => {
     dispatch({ type: 'AUTH_UPDATE_USER', payload: user });
+    tokenStorage.setUser(user);
+  }, []);
+
+  // Register function - Updated for proper integration
+  const register = useCallback(async (userData: RegistrationCredentials): Promise<{ success: boolean; message: string; emailVerificationRequired?: boolean }> => {
+    dispatch({ type: 'AUTH_START' });
+
+    try {
+      console.log('🔐 AuthContext - Attempting registration for:', userData.email);
+      
+      const response = await pythonApiClient.register({
+        email: userData.email,
+        password: userData.password,
+        password_confirm: userData.password_confirm,
+        name: userData.name,
+        department: userData.department,
+        job_title: userData.job_title,
+        phone: userData.phone,
+        terms_accepted: userData.terms_accepted,
+        privacy_policy_accepted: userData.privacy_policy_accepted,
+      });
+
+      if (response.success) {
+        console.log('✅ Registration successful for:', userData.email);
+        
+        dispatch({ 
+          type: 'REGISTRATION_SUCCESS', 
+          payload: { 
+            emailVerificationRequired: response.email_verification_required || false 
+          } 
+        });
+        
+        return {
+          success: true,
+          message: response.message,
+          emailVerificationRequired: response.email_verification_required,
+        };
+      } else {
+        const error = response.message || 'Registration failed';
+        dispatch({ type: 'REGISTRATION_FAILURE', payload: error });
+        return {
+          success: false,
+          message: error,
+        };
+      }
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      console.error('❌ Registration error:', errorMessage);
+      dispatch({ type: 'REGISTRATION_FAILURE', payload: errorMessage });
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
   }, []);
 
   const value: AuthContextType = {
     ...state,
     login,
+    register,
     socialLogin,
     logout,
     logoutAll,
@@ -548,6 +746,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     clearError,
     updateUser,
     checkAuthStatus,
+    clearRegistrationState,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -564,22 +763,27 @@ export function useAuth(): AuthContextType {
   return context;
 }
 
-// Utility function to extract error messages
+// Utility function to extract error messages from Python API
 function getErrorMessage(error: any): string {
-  if (axios.isAxiosError(error)) {
-    const response = error.response;
+  // Check if it's an ApiError from the Python client
+  if (error && typeof error === 'object' && 'status' in error) {
+    const apiError = error as ApiError;
     
-    if (response?.data?.message) {
-      return response.data.message;
+    // Use the error message if available
+    if (apiError.message) {
+      return apiError.message;
     }
     
-    switch (response?.status) {
+    // Fall back to status-based messages
+    switch (apiError.status) {
       case 401:
         return 'Invalid credentials or session expired';
       case 403:
         return 'Access forbidden';
       case 404:
         return 'Service not found';
+      case 422:
+        return 'Invalid input data';
       case 429:
         return 'Too many requests. Please try again later';
       case 500:
@@ -596,7 +800,7 @@ function getErrorMessage(error: any): string {
   return 'An unexpected error occurred';
 }
 
-// Export auth API instance for use in other parts of the app
-export { authApi };
+// Export Python API client for use in other parts of the app
+export { pythonApiClient };
 
 export default AuthContext;

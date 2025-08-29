@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        input, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <h1>Login Test</h1>
+    
+    <input type="email" id="email" placeholder="Email" value="admin@plataforma.app">
+    <input type="password" id="password" placeholder="Password" value="admin123">
+    <button onclick="testDirectAPI()">Test Direct API (port 8001)</button>
+    <button onclick="testProxiedAPI()">Test Proxied API (port 3333)</button>
+    <button onclick="testWithAxios()">Test with Axios</button>
+    
+    <div id="result"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        async function testDirectAPI() {
+            try {
+                resultDiv.textContent = 'Testing direct API...';
+                const response = await fetch('http://localhost:8001/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                        remember_me: false
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = response.ok ? 'success' : 'error';
+                resultDiv.textContent = `Direct API Response (${response.status}):\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `Direct API Error:\n${error.message}`;
+            }
+        }
+        
+        async function testProxiedAPI() {
+            try {
+                resultDiv.textContent = 'Testing proxied API...';
+                const response = await fetch('http://localhost:3333/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                        remember_me: false
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.className = response.ok ? 'success' : 'error';
+                resultDiv.textContent = `Proxied API Response (${response.status}):\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `Proxied API Error:\n${error.message}`;
+            }
+        }
+        
+        async function testWithAxios() {
+            try {
+                resultDiv.textContent = 'Testing with Axios...';
+                const response = await axios.post('http://localhost:3333/api/v1/auth/login', {
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                    remember_me: false
+                });
+                
+                resultDiv.className = 'success';
+                resultDiv.textContent = `Axios Response (${response.status}):\n${JSON.stringify(response.data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = `Axios Error:\n${error.message}\n${error.response ? JSON.stringify(error.response.data, null, 2) : ''}`;
+            }
+        }
+    </script>
+</body>
+</html>

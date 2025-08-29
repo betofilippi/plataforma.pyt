@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { WindowManagerProvider, WindowDesktop } from "@/components/windows";
-import { Eye, EyeOff, Lock, User, ArrowRight, X, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Lock, User, ArrowRight, X, AlertCircle, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import RegistrationModal from "@/components/RegistrationModal";
 
 // Validation schema
 const loginSchema = z.object({
@@ -19,8 +20,10 @@ type LoginFormData = z.infer<typeof loginSchema>;
 // Login Modal Component
 function LoginModal({
   onClose,
+  onSwitchToRegister,
 }: {
   onClose: () => void;
+  onSwitchToRegister: () => void;
 }) {
   const { login, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
@@ -252,6 +255,23 @@ function LoginModal({
               💡 Ou use qualquer email/senha para criar uma conta temporária
             </p>
           </div>
+
+          {/* Registration Link */}
+          <div className="text-center pt-4 border-t border-white/10">
+            <p className="text-sm text-gray-400 mb-3">
+              Não tem uma conta?
+            </p>
+            <Button
+              type="button"
+              onClick={onSwitchToRegister}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl transition-all duration-200"
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <UserPlus className="w-5 h-5" />
+                <span>Criar Nova Conta</span>
+              </div>
+            </Button>
+          </div>
         </form>
       </div>
     </div>
@@ -276,9 +296,14 @@ function PlatformIcon({ sx }: { sx?: any }) {
 
 export default function Login() {
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
   const handleLoginClick = () => {
     setShowLoginModal(true);
+  };
+
+  const handleRegistrationClick = () => {
+    setShowRegistrationModal(true);
   };
 
   return (
@@ -330,6 +355,21 @@ export default function Login() {
             {showLoginModal && (
               <LoginModal
                 onClose={() => setShowLoginModal(false)}
+                onSwitchToRegister={() => {
+                  setShowLoginModal(false);
+                  setShowRegistrationModal(true);
+                }}
+              />
+            )}
+
+            {/* Registration Modal */}
+            {showRegistrationModal && (
+              <RegistrationModal
+                onClose={() => setShowRegistrationModal(false)}
+                onSwitchToLogin={() => {
+                  setShowRegistrationModal(false);
+                  setShowLoginModal(true);
+                }}
               />
             )}
           </div>

@@ -14,7 +14,7 @@ const isDevelopment = () => {
   );
 };
 
-// Base URL do backend
+// Base URL do backend Express (Node.js)
 export const getApiBaseUrl = () => {
   if (isDevelopment()) {
     // Em desenvolvimento, o backend Express roda na porta 4000
@@ -25,7 +25,15 @@ export const getApiBaseUrl = () => {
   return '';
 };
 
-// URLs específicas das APIs
+// Base URL do Python backend (FastAPI)
+export const getPythonApiBaseUrl = () => {
+  // SEMPRE usa URLs relativas pois o Vite proxy cuida do redirecionamento
+  // Em desenvolvimento: proxy para localhost:8001
+  // Em produção: mesma origem
+  return ''; // URL relativa - usa o proxy do Vite
+};
+
+// URLs específicas das APIs Node.js
 export const API_URLS = {
   auth: `${getApiBaseUrl()}/api/auth`,
   database: `${getApiBaseUrl()}/api/database`,
@@ -34,7 +42,18 @@ export const API_URLS = {
   notifications: `${getApiBaseUrl()}/api/notifications`,
 };
 
-// Configurações de requisição
+// URLs específicas do Python backend
+export const PYTHON_API_URLS = {
+  base: getPythonApiBaseUrl(),
+  auth: `${getPythonApiBaseUrl()}/api/v1/auth`,
+  users: `${getPythonApiBaseUrl()}/api/v1/users`,
+  dashboard: `${getPythonApiBaseUrl()}/api/v1/dashboard`,
+  websocket: isDevelopment() ? `ws://localhost:8001/api/v1/ws` : `${window.location.origin.replace('http', 'ws')}/api/v1/ws`,
+  health: `${getPythonApiBaseUrl()}/health`,
+  metrics: `${getPythonApiBaseUrl()}/metrics`,
+};
+
+// Configurações de requisição Node.js
 export const API_CONFIG = {
   timeout: 30000, // 30 segundos
   headers: {
@@ -42,7 +61,27 @@ export const API_CONFIG = {
   },
 };
 
-// Helper para adicionar token de autenticação
+// Configurações de requisição Python backend
+export const PYTHON_API_CONFIG = {
+  timeout: 30000, // 30 segundos
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  withCredentials: false,
+  retries: 3,
+  retryDelay: 1000,
+};
+
+// WebSocket configuration for Python backend
+export const WEBSOCKET_CONFIG = {
+  reconnectAttempts: 5,
+  reconnectDelay: 3000,
+  heartbeatInterval: 30000,
+  timeout: 10000,
+};
+
+// Helper para adicionar token de autenticação (Node.js)
 export const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
   if (token) {
@@ -52,4 +91,30 @@ export const getAuthHeaders = () => {
     };
   }
   return API_CONFIG.headers;
+};
+
+// Helper para adicionar token de autenticação (Python backend)
+export const getPythonAuthHeaders = () => {
+  const token = localStorage.getItem('pythonAccessToken') || localStorage.getItem('accessToken');
+  if (token) {
+    return {
+      ...PYTHON_API_CONFIG.headers,
+      'Authorization': `Bearer ${token}`,
+    };
+  }
+  return PYTHON_API_CONFIG.headers;
+};
+
+// Environment detection
+export const getEnvironment = () => {
+  return isDevelopment() ? 'development' : 'production';
+};
+
+// Debug logging configuration
+export const DEBUG_CONFIG = {
+  enabled: isDevelopment(),
+  logRequests: true,
+  logResponses: true,
+  logErrors: true,
+  logWebSocket: true,
 };

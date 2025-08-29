@@ -1,0 +1,98 @@
+{
+  "name": "vendas",
+  "display_name": "Vendas",
+  "description": "Sistema completo de gestão de vendas com clientes, produtos, pedidos, pagamentos e comissões",
+  "version": "2.0.0",
+  "author": "plataforma.app",
+  "email": "vendas@plataforma.app",
+  "repository": "https://github.com/plataforma-modules/vendas",
+  "category": "business",
+  "tags": ["vendas", "pedidos", "clientes", "produtos", "comissoes", "pagamentos"],
+  "icon": "ShoppingCart",
+  "color": "#10B981",
+  "dependencies": {
+    "modules": [],
+    "npm": {
+      "react": "^18.0.0",
+      "lucide-react": "^0.263.1"
+    }
+  },
+  "routes": [
+    {
+      "path": "/vendas",
+      "component": "VendasDashboard",
+      "label": "Dashboard",
+      "icon": "LayoutDashboard"
+    },
+    {
+      "path": "/vendas/pedidos",
+      "component": "PedidosList",
+      "label": "Pedidos",
+      "icon": "ShoppingCart"
+    },
+    {
+      "path": "/vendas/clientes",
+      "component": "ClientesList",
+      "label": "Clientes",
+      "icon": "Users"
+    },
+    {
+      "path": "/vendas/produtos",
+      "component": "ProdutosList",
+      "label": "Produtos",
+      "icon": "Package"
+    },
+    {
+      "path": "/vendas/relatorios",
+      "component": "VendasReports",
+      "label": "Relatórios",
+      "icon": "FileText"
+    }
+  ],
+  "permissions": [
+    "vendas:view",
+    "vendas:create",
+    "vendas:edit",
+    "vendas:delete",
+    "vendas:approve",
+    "vendas:reports",
+    "vendas:admin"
+  ],
+  "settings": {
+    "configurable": true,
+    "defaults": {
+      "currency": "BRL",
+      "tax_rate": 0,
+      "commission_rate": 5,
+      "allow_discounts": true,
+      "max_discount_percent": 20,
+      "require_approval_above": 10000
+    }
+  },
+  "database": {
+    "schema": "vendas",
+    "tables": [
+      "pedidos",
+      "clientes",
+      "produtos",
+      "categorias_produto",
+      "itens_pedido",
+      "formas_pagamento",
+      "pagamentos_pedido",
+      "comissoes",
+      "metas_vendas"
+    ],
+    "migrations": true,
+    "seeds": true
+  },
+  "features": {
+    "dashboard": true,
+    "reports": true,
+    "notifications": true,
+    "webhooks": true,
+    "api": true,
+    "realtime": true
+  },
+  "created_at": "2025-08-28T23:36:45.629096",
+  "updated_at": "2025-08-29T00:00:00.000Z"
+}

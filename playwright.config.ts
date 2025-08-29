@@ -29,7 +29,7 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3030',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3333',
     
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
@@ -46,8 +46,8 @@ export default defineConfig({
   },
 
   /* Configure global setup and teardown */
-  globalSetup: require.resolve('./e2e/global-setup'),
-  globalTeardown: require.resolve('./e2e/global-teardown'),
+  globalSetup: './e2e/global-setup',
+  globalTeardown: './e2e/global-teardown',
 
   /* Configure projects for major browsers */
   projects: [
